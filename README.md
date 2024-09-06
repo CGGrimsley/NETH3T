@@ -67,7 +67,7 @@ The project uses several hardware components to enable all the features describe
 2. **Adafruit Powerboost 1000c**: Load-sharing charger circuit that allows charging of batteries and power supply to the device. [click here](https://www.adafruit.com/product/2465)
 
 ### **Storage:**
-1. 32GB MicroSD card: Stores logs, programs and data. 32GB is the largest supported partition on ESP32s [click here](https://www.amazon.com/SanDisk-Ultra-UHS-I-Memory-Adapter/dp/B00M55C0NS/ref=sr_1_7?crid=IN8E9C5QACD8&dib=eyJ2IjoiMSJ9.B95zlcmYonfz4dY7353CikOTGq4gxvPdpZ9JTVXWNlwkRO7PGJOQbtTqrKfmuztrDqjv9dmItno_1id_mIwg75OkS0ERdIgQVOD7iDgSCJ7LWdwiEXjhNEu5JqyRj7bHo-L92ieL9e2flMOaB00h4MkDH_MgWAcNq9DQQcFh545Z0qihgtOkcxZQEtsdmVfzW4eYJQvfecmWeloKFozWE4zMlm9JVMMgD8W_f35QteY.EAqy466m6iTcsbn8g_uaxNl6Q1PJGHPRw3mz1jb8eBg&dib_tag=se&keywords=microsd+32gb&qid=1725649398&sprefix=microsd+32gb%2Caps%2C88&sr=8-7)
+1. 32GB MicroSD card: Stores logs, programs and data. 32GB is the largest supported partition on ESP32s. [click here](https://www.amazon.com/SanDisk-Ultra-UHS-I-Memory-Adapter/dp/B00M55C0NS/ref=sr_1_7?crid=IN8E9C5QACD8&dib=eyJ2IjoiMSJ9.B95zlcmYonfz4dY7353CikOTGq4gxvPdpZ9JTVXWNlwkRO7PGJOQbtTqrKfmuztrDqjv9dmItno_1id_mIwg75OkS0ERdIgQVOD7iDgSCJ7LWdwiEXjhNEu5JqyRj7bHo-L92ieL9e2flMOaB00h4MkDH_MgWAcNq9DQQcFh545Z0qihgtOkcxZQEtsdmVfzW4eYJQvfecmWeloKFozWE4zMlm9JVMMgD8W_f35QteY.EAqy466m6iTcsbn8g_uaxNl6Q1PJGHPRw3mz1jb8eBg&dib_tag=se&keywords=microsd+32gb&qid=1725649398&sprefix=microsd+32gb%2Caps%2C88&sr=8-7)
 
 ## **Planned Features**
 1. **Custom Menu System:**
