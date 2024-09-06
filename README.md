@@ -85,6 +85,9 @@ The project uses several hardware components to enable all the features describe
    - Wire the **5-way navigation button** to the designated GPIO pins.
    - Attach the **IR LED** and **IR Receiver** for IR signal control.
 
+![image](https://github.com/user-attachments/assets/d49f0792-7bd1-45ed-ba8a-7a8c976d2a74)
+
+
 ### **Building and Flashing the Firmware**
 Once the hardware is wired and the software dependencies are installed, you can build and flash the firmware to the device.
 
