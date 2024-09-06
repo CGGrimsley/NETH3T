@@ -80,6 +80,10 @@ The project uses several hardware components to enable all the features describe
 
 3. **Logs and Scripts:**
    - The **MicroSD card** will allow storing the results of tests, as well as loading pre-written attack scripts, enabling users to automate penetration testing tasks.
+  
+4. **Modularity:**
+   - This repository will hopefully host a myriad of **3D printable modules and accesories** for the NETH3T.
+   - Ability to plug and play **I2C** and **SPI** modules to customize your device.
 
 ## **Getting Started**
 ### **Prerequisites**
