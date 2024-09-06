@@ -1,7 +1,7 @@
 ![N3 Logo](https://i.imgur.com/xraBuH7.png)
 
 # **NETH3T Penetration Testing Device**
-# (Network Exploits and Testing Tool 3) 
+### (Network Exploits and Testing Tool 3) 
 
 ## **Project Overview**
 This project aims to create a **multifunctional, portable penetration testing device** inspired by the capabilities of the **Flipper Zero**, but with enhanced functionality. The device leverages the **DSTIKE D-duino 32 (ESP32-based)** microcontroller and integrates several RF, NFC/RFID, IR, and Wi-Fi testing capabilities. It allows users to perform **Wi-Fi deauthentication attacks**, **RF signal sniffing and jamming**, **NFC/RFID cloning**, and **IR signal replaying**, all while being compact, portable, and flexible.
