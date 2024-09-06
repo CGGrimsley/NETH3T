@@ -92,7 +92,26 @@ The project uses several hardware components to enable all the features describe
    - Wire the **5-way navigation button** to the designated GPIO pins.
    - Attach the **IR LED** and **IR Receiver** for IR signal control.
 
-![image](https://github.com/user-attachments/assets/d49f0792-7bd1-45ed-ba8a-7a8c976d2a74)
+  ## **Pinout Table**
+
+| Component                         | GPIO Pins Assigned                | Communication Protocol   |
+|------------------------------------|-----------------------------------|--------------------------|
+| **PN5180 NFC/RFID Module**         | GPIO23 (MOSI), GPIO19 (MISO),     | SPI                      |
+|                                    | GPIO18 (SCK), GPIO5 (CS),         |                          |
+|                                    | GPIO16 (IRQ), GPIO17 (RST)        |                          |
+| **CC1101 RF Module (Sub-GHz)**     | GPIO23 (MOSI), GPIO19 (MISO),     | SPI                      |
+|                                    | GPIO18 (SCK), GPIO25 (CS)         |                          |
+| **NRF24L01+ RF Module (2.4 GHz)**  | GPIO23 (MOSI), GPIO19 (MISO),     | SPI                      |
+|                                    | GPIO18 (SCK), GPIO26 (CS)         |                          |
+| **IR LED (Transmitter)**           | GPIO15                            | Digital Output            |
+| **IR Receiver (TSOP38238)**        | GPIO17                            | Digital Input             |
+| **Dual OLED Displays**             | GPIO21 (SDA), GPIO22 (SCL)        | I2C                       |
+| **MicroSD Card Reader**            | GPIO23 (MOSI), GPIO19 (MISO),     | SPI                      |
+|                                    | GPIO18 (SCK), GPIO4 (CS)          |                          |
+| **5-Way Navigation Button**        | GPIO32 (Up), GPIO33 (Down),       | Digital Input             |
+|                                    | GPIO34 (Left), GPIO35 (Right),    |                          |
+|                                    | GPIO36 (Center/Select)            |                          |
+
 
 
 ### **Building and Flashing the Firmware**
