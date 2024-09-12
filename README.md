@@ -46,7 +46,7 @@ This device is built to be used in **wireless penetration testing, RF analysis**
 The project uses several hardware components to enable all the features described:
 
 ### **Microcontroller:**
-- **DSTIKE D-duino 32 (ESP32-based)**: The core of the device, handling Wi-Fi, Bluetooth, and control of other connected modules. [click here](https://dstike.com/products/d-duino-32-ii-dual-screen)
+- **DSTIKE D-duino 32 (or any ESP32 based device)**: The core of the device, handling Wi-Fi, Bluetooth, and control of other connected modules. [click here](https://dstike.com/products/d-duino-32-ii-dual-screen)
 
 ### **Modules:**
 1. **PN5180 (NFC/RFID Reader/Writer)**: [click here](https://www.aliexpress.us/item/2255800898209354.html?spm=a2g0o.productlist.main.3.426ede69lRwYd9&algo_pvid=5be9b316-9c80-437f-acb0-cde0fe82ce23&algo_exp_id=5be9b316-9c80-437f-acb0-cde0fe82ce23-1&pdp_npi=4%40dis%21USD%214.40%214.40%21%21%214.40%214.40%21%402101e9a217256492677022260e3a15%2110000014282558858%21sea%21US%216045824045%21X&curPageLogUid=f0MugwJMs5DN&utparam-url=scene%3Asearch%7Cquery_from%3A)
@@ -95,7 +95,7 @@ The project uses several hardware components to enable all the features describe
 ### **Hardware Setup**
 1. **Wiring the Modules**:
    - Connect the **PN5180, CC1101, and NRF24L01+** modules to the **ESP32** via **SPI**.
-   - Connect the **OLED screens** via **I2C**.
+   - Connect the **OLED screens** via **I2C** (if applicable).
    - Wire the **5-way navigation button** to the designated GPIO pins.
    - Attach the **IR LED** and **IR Receiver** for IR signal control.
 
