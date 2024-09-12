@@ -101,23 +101,42 @@ The project uses several hardware components to enable all the features describe
 
   ## **Pinout Table**
 
-| Component                         | GPIO Pins Assigned                | Communication Protocol   |
-|------------------------------------|-----------------------------------|--------------------------|
-| **PN5180 NFC/RFID Module**         | GPIO23 (MOSI), GPIO19 (MISO),     | SPI                      |
-|                                    | GPIO18 (SCK), GPIO5 (CS),         |                          |
-|                                    | GPIO16 (IRQ), GPIO17 (RST)        |                          |
-| **CC1101 RF Module (Sub-GHz)**     | GPIO23 (MOSI), GPIO19 (MISO),     | SPI                      |
-|                                    | GPIO18 (SCK), GPIO25 (CS)         |                          |
-| **NRF24L01+ RF Module (2.4 GHz)**  | GPIO23 (MOSI), GPIO19 (MISO),     | SPI                      |
-|                                    | GPIO18 (SCK), GPIO26 (CS)         |                          |
-| **IR LED (Transmitter)**           | GPIO15                            | Digital Output            |
-| **IR Receiver (TSOP38238)**        | GPIO17                            | Digital Input             |
-| **Dual OLED Displays**             | GPIO21 (SDA), GPIO22 (SCL)        | I2C                       |
-| **MicroSD Card Reader**            | GPIO23 (MOSI), GPIO19 (MISO),     | SPI                      |
-|                                    | GPIO18 (SCK), GPIO4 (CS)          |                          |
-| **5-Way Navigation Button**        | GPIO32 (Up), GPIO33 (Down),       | Digital Input             |
-|                                    | GPIO34 (Left), GPIO35 (Right),    |                          |
-|                                    | GPIO36 (Center/Select)            |                          |
+## NETH3T Pinout Table
+
+| **Component**                | **Pin Name**    | **ESP32 GPIO Pin** |
+|------------------------------|-----------------|--------------------|
+| **PN5180 (NFC/RFID)**         | SCK             | GPIO 18            |
+|                              | MOSI            | GPIO 23            |
+|                              | MISO            | GPIO 19            |
+|                              | CS (SDA)        | GPIO 5             |
+|                              | IRQ (RQ)        | GPIO 33            |
+|                              | RST             | GPIO 32            |
+|                              | VCC             | 3.3V               |
+|                              | GND             | GND                |
+| **CC1101 (Sub-GHz RF)**       | SCK             | GPIO 18            |
+|                              | MOSI            | GPIO 23            |
+|                              | MISO (GDO1)     | GPIO 19            |
+|                              | CSN             | GPIO 26            |
+|                              | VCC             | 3.3V               |
+|                              | GND             | GND                |
+| **NRF24L01+ (2.4 GHz RF)**    | SCK             | GPIO 18            |
+|                              | MOSI            | GPIO 23            |
+|                              | MISO            | GPIO 19            |
+|                              | CSN             | GPIO 25            |
+|                              | CE              | GPIO 33            |
+|                              | IRQ             | Optional           |
+|                              | VCC             | 3.3V               |
+|                              | GND             | GND                |
+| **IR Emitter**                | DAT             | GPIO 32            |
+|                              | VCC             | 3.3V               |
+|                              | GND             | GND                |
+| **TSOP IR Receiver**          | OUT (Data)      | GPIO 34            |
+|                              | VCC             | 3.3V               |
+|                              | GND             | GND                |
+
+You may need to create a BUS to wire some modules together for some boards such as I2C, SPI components, power and ground. Make sure that your board can provide enough power for this to function!
+You may also need to use Multiplexors/I2C expanders for some boards so shop accordingly!
+
 
 
 
