@@ -72,6 +72,9 @@ The project uses several hardware components to enable all the features describe
 ### **Storage:**
 1. 32GB MicroSD card: Stores logs, programs and data. 32GB is the largest supported partition on ESP32s. [click here](https://www.amazon.com/SanDisk-Ultra-UHS-I-Memory-Adapter/dp/B00M55C0NS/ref=sr_1_7?crid=IN8E9C5QACD8&dib=eyJ2IjoiMSJ9.B95zlcmYonfz4dY7353CikOTGq4gxvPdpZ9JTVXWNlwkRO7PGJOQbtTqrKfmuztrDqjv9dmItno_1id_mIwg75OkS0ERdIgQVOD7iDgSCJ7LWdwiEXjhNEu5JqyRj7bHo-L92ieL9e2flMOaB00h4MkDH_MgWAcNq9DQQcFh545Z0qihgtOkcxZQEtsdmVfzW4eYJQvfecmWeloKFozWE4zMlm9JVMMgD8W_f35QteY.EAqy466m6iTcsbn8g_uaxNl6Q1PJGHPRw3mz1jb8eBg&dib_tag=se&keywords=microsd+32gb&qid=1725649398&sprefix=microsd+32gb%2Caps%2C88&sr=8-7)
 
+### **Misc:**
+1. MCP23017 IO Expansion Board: Allows for more GPIO pins for your device. [click here](https://www.amazon.com/MCP23017-IO-Expansion-Board-Interface/dp/B082MMRNM4/ref=asc_df_B082MMRNM4/?tag=hyprod-20&linkCode=df0&hvadid=693275687937&hvpos=&hvnetw=g&hvrand=65468722566896919&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=1021296&hvtargid=pla-2265047735973&psc=1&mcid=2865196cbacc3460a9f89d28bd672874)
+
 ## **Planned Features**
 1. **Custom Menu System:**
    - A simple, user-friendly menu displayed on the **OLED screens**, navigated using the **5-way button**. The menu will allow users to select Wi-Fi testing, RF testing, NFC/RFID functions, IR control, and view logs or stored scripts.
@@ -103,39 +106,48 @@ The project uses several hardware components to enable all the features describe
 
 ## NETH3T Pinout Table
 
-| **Component**                | **Pin Name**    | **ESP32 GPIO Pin** |
-|------------------------------|-----------------|--------------------|
-| **PN5180 (NFC/RFID)**         | SCK             | GPIO 18            |
-|                              | MOSI            | GPIO 23            |
-|                              | MISO            | GPIO 19            |
-|                              | CS (SDA)        | GPIO 5             |
-|                              | IRQ (RQ)        | GPIO 33            |
-|                              | RST             | GPIO 32            |
-|                              | VCC             | 3.3V               |
-|                              | GND             | GND                |
-| **CC1101 (Sub-GHz RF)**       | SCK             | GPIO 18            |
-|                              | MOSI            | GPIO 23            |
-|                              | MISO (GDO1)     | GPIO 19            |
-|                              | CSN             | GPIO 26            |
-|                              | VCC             | 3.3V               |
-|                              | GND             | GND                |
-| **NRF24L01+ (2.4 GHz RF)**    | SCK             | GPIO 18            |
-|                              | MOSI            | GPIO 23            |
-|                              | MISO            | GPIO 19            |
-|                              | CSN             | GPIO 25            |
-|                              | CE              | GPIO 33            |
-|                              | IRQ             | Optional           |
-|                              | VCC             | 3.3V               |
-|                              | GND             | GND                |
-| **IR Emitter**                | DAT             | GPIO 32            |
-|                              | VCC             | 3.3V               |
-|                              | GND             | GND                |
-| **TSOP IR Receiver**          | OUT (Data)      | GPIO 34            |
-|                              | VCC             | 3.3V               |
-|                              | GND             | GND                |
+| **Component**                | **Pin Name**     | **ESP32 GPIO Pin**     | **Expander Pin**  |
+|------------------------------|------------------|------------------------|-------------------|
+| **PN5180 (NFC/RFID)**         | SCK              | GPIO 18                |                   |
+|                              | MOSI             | GPIO 23                |                   |
+|                              | MISO             | GPIO 19                |                   |
+|                              | CS               |                        | **PA0**           |
+|                              | IRQ              |                        | **PA1**           |
+|                              | RST              |                        | **PA2**           |
+|                              | VCC              | 3.3V                   |                   |
+|                              | GND              | GND                    |                   |
+| **CC1101 (Sub-GHz RF)**       | SCK              | GPIO 18                |                   |
+|                              | MOSI             | GPIO 23                |                   |
+|                              | MISO (GDO1)      | GPIO 19                |                   |
+|                              | CSN              |                        | **PB0**           |
+|                              | VCC              | 3.3V                   |                   |
+|                              | GND              | GND                    |                   |
+| **NRF24L01+ (2.4 GHz RF)**    | SCK              | GPIO 18                |                   |
+|                              | MOSI             | GPIO 23                |                   |
+|                              | MISO             | GPIO 19                |                   |
+|                              | CSN              |                        | **PB1**           |
+|                              | CE               |                        | **PB2**           |
+|                              | IRQ              |                        | **PB3**           |
+|                              | VCC              | 3.3V                   |                   |
+|                              | GND              | GND                    |                   |
+| **IR Emitter**                | DAT              |                        | **PB4**           |
+|                              | VCC              | 3.3V                   |                   |
+|                              | GND              | GND                    |                   |
+| **TSOP IR Receiver**          | OUT (Data)       |                        | **PB5**           |
+|                              | VCC              | 3.3V                   |                   |
+|                              | GND              | GND                    |
+| **MCP23017 (GPIO Expander)**  | SDA              | GPIO 21                |                   |
+|                              | SCL              | GPIO 22                |                   |
+|                              | INTA/INTB        | Optional IRQ pin on ESP32 |               |
 
-You may need to create a BUS to wire some modules together for some boards such as I2C, SPI components, power and ground. Make sure that your board can provide enough power for this to function!
-You may also need to use Multiplexors/I2C expanders for some boards so shop accordingly!
+### **Free ESP32 GPIOs**:
+GPIO 0, GPIO 1 (TX), GPIO 3 (RX), GPIO 5, GPIO 25, GPIO 26, GPIO 32, GPIO 33, GPIO 34 remain free for other use.
+
+### This is the chart when using a Dstike D-Duino 32 II with a MCP23017 IO expander. Your board may differ!
+
+### You may need to create a BUS to wire some modules together for some boards such as I2C, SPI components, power and ground. 
+### Make sure that your board can provide enough power for this to function!
+### You may also need to use Multiplexors/I2C expanders for some boards so shop accordingly!
 
 
 
