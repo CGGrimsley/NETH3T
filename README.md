@@ -144,10 +144,9 @@ The project uses several hardware components to enable all the features describe
 GPIO 0, GPIO 1 (TX), GPIO 3 (RX), GPIO 5, GPIO 25, GPIO 26, GPIO 32, GPIO 33, GPIO 34 remain free for other use.
 
 ### This is the chart when using a Dstike D-Duino 32 II with a MCP23017 IO expander. Your board may differ!
-
-### You may need to create a BUS to wire some modules together for some boards such as I2C, SPI components, power and ground. 
-### Make sure that your board can provide enough power for this to function!
-### You may also need to use Multiplexors/I2C expanders for some boards so shop accordingly!
+You may need to create a BUS to wire some modules together for some boards such as I2C, SPI components, power and ground. 
+Make sure that your board can provide enough power for this to function!
+You may also need to use Multiplexors/I2C expanders for some boards so shop accordingly!
 
 
 
