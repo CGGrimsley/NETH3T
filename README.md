@@ -99,7 +99,7 @@ The project uses several hardware components to enable all the features describe
 1. **Wiring the Modules**:
    - Connect the **PN5180, CC1101, and NRF24L01+** modules to the **ESP32** via **SPI**.
    - Connect the **OLED screens** via **I2C** (if applicable).
-   - Wire the **5-way navigation button** to the designated GPIO pins.
+   - Wire the **5-way navigation button** to the designated GPIO pins (if applicable). 
    - Attach the **IR LED** and **IR Receiver** for IR signal control.
 
   ## **Pinout Table**
