@@ -5,10 +5,8 @@
 #include <cstring>
 #include "core/db_task.h"
 #include "core/health.h"
-#include "detect/drone_vendors.h"
 #include "detect/id_cache.h"
-#include "detect/wifi_frames.h"
-#include "radio/rid_common.h"
+#include "detect/obs_build.h"
 #include "settings/settings.h"
 
 namespace {
@@ -41,47 +39,10 @@ void on_pkt(void* buf, wifi_promiscuous_pkt_type_t type) {
 }
 
 void handle(const Frame& f) {
-  WifiParse w;
-  if (!wifi_parse_mgmt(f.data, f.len, w)) return;
   const Settings& s = settings::get();
-  uint32_t now = millis();
+  DetectFlags fl = {s.en_rid_wifi, s.en_rid_ble, s.en_drone_wifi};
   Observation o;
-  switch (w.kind) {
-    case WifiKind::ODID_BEACON:
-    case WifiKind::ODID_NAN:
-      if (!s.en_rid_wifi) return;
-      if (!make_rid_observation(SourceType::REMOTEID_WIFI, w.src, w.odid, w.odid_len, g_ids, now, o))
-        return;
-      break;
-    case WifiKind::DJI_LEGACY:
-      if (!s.en_rid_wifi) return;
-      memset(&o, 0, sizeof o);
-      o.type = SourceType::DJI_LEGACY;
-      o.conf = Confidence::FINGERPRINT;
-      format_mac(w.src, o.id);
-      snprintf(o.label, sizeof o.label, "DJI DroneID");
-      snprintf(o.vendor, sizeof o.vendor, "DJI");
-      break;
-    case WifiKind::PLAIN_BEACON: {
-      if (!s.en_drone_wifi) return;
-      const char* v = drone_vendor_by_oui(w.src);
-      if (!v) v = drone_vendor_by_ssid(w.ssid);
-      if (!v) return;
-      memset(&o, 0, sizeof o);
-      o.type = SourceType::DRONE_WIFI;
-      o.conf = Confidence::HEURISTIC;
-      format_mac(w.src, o.id);
-      snprintf(o.label, sizeof o.label, "%s", w.ssid[0] ? w.ssid : o.id);
-      snprintf(o.vendor, sizeof o.vendor, "%s", v);
-      break;
-    }
-    default:
-      return;
-  }
-  o.t_ms = now;
-  o.rssi_dbm = f.rssi;
-  o.freq_khz = 2407000 + (uint32_t)f.ch * 5000;
-  db::post(o);
+  if (obs_from_wifi(f.data, f.len, f.rssi, f.ch, millis(), fl, g_ids, o)) db::post(o);
 }
 
 void parse_task(void*) {

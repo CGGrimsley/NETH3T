@@ -2,9 +2,8 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 #include "core/db_task.h"
-#include "detect/ble_adv.h"
 #include "detect/id_cache.h"
-#include "radio/rid_common.h"
+#include "detect/obs_build.h"
 #include "settings/settings.h"
 
 namespace {
@@ -14,19 +13,14 @@ constexpr uint16_t kIntervalMs = 1000, kWindowMs = 300;
 
 class Callbacks : public NimBLEScanCallbacks {
   void onResult(const NimBLEAdvertisedDevice* d) override {
-    if (!settings::get().en_rid_ble) return;
+    const Settings& s = settings::get();
+    DetectFlags fl = {s.en_rid_wifi, s.en_rid_ble, s.en_drone_wifi};
     const std::vector<uint8_t>& p = d->getPayload();
-    const uint8_t* odid;
-    size_t n;
-    if (!ble_find_odid(p.data(), p.size(), &odid, &n)) return;
     // NimBLE stores addresses little-endian; present them MSB first.
     const uint8_t* le = d->getAddress().getVal();
     uint8_t mac[6] = {le[5], le[4], le[3], le[2], le[1], le[0]};
     Observation o;
-    if (!make_rid_observation(SourceType::REMOTEID_BLE, mac, odid, n, g_ids, millis(), o)) return;
-    o.rssi_dbm = d->getRSSI();
-    o.freq_khz = 2402000;  // advertising channel not reported
-    db::post(o);
+    if (obs_from_ble(mac, p.data(), p.size(), d->getRSSI(), millis(), fl, g_ids, o)) db::post(o);
   }
 };
 Callbacks g_cb;

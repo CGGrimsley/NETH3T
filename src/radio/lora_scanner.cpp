@@ -7,7 +7,7 @@
 #include "core/db_task.h"
 #include "core/health.h"
 #include "core/spi_bus.h"
-#include "detect/lora_headers.h"
+#include "detect/obs_build.h"
 #include "detect/noise_floor.h"
 #include "settings/settings.h"
 
@@ -177,30 +177,7 @@ void run_cad(size_t pi, uint8_t sf, const uint32_t* freqs, uint8_t n, bool iq) {
 
 void post_packet(const ScanPlan& p, uint32_t f, uint8_t sf, const uint8_t* buf, size_t len, float rssi, float snr) {
   Observation o;
-  memset(&o, 0, sizeof o);
-  o.t_ms = millis();
-  o.freq_khz = f;
-  o.rssi_dbm = (int16_t)rssi;
-  o.snr_db = (int8_t)snr;
-  o.lora = {sf, p.bw_hz, 0};
-  MeshHeader mh;
-  LwHeader lw;
-  if (p.kind == PlanKind::MESHTASTIC && parse_meshtastic(buf, len, mh)) {
-    o.type = SourceType::MESHTASTIC;
-    o.conf = Confidence::DECODED;
-    format_mesh_id(mh.sender, o.id);
-    snprintf(o.label, sizeof o.label, "Mesh %s", o.id);
-  } else if (p.kind == PlanKind::LORAWAN && parse_lorawan(buf, len, lw)) {
-    o.type = SourceType::LORAWAN;
-    o.conf = Confidence::DECODED;
-    format_lw_id(lw, o.id);
-    snprintf(o.label, sizeof o.label, "LW %s", o.id);
-  } else {
-    o.type = SourceType::LORA_UNKNOWN;
-    o.conf = Confidence::HEURISTIC;
-    snprintf(o.id, sizeof o.id, "LORA-%u-SF%u", (unsigned)(f / 1000), (unsigned)sf);
-    snprintf(o.label, sizeof o.label, "LoRa %u.%03u SF%u", (unsigned)(f / 1000), (unsigned)(f % 1000), (unsigned)sf);
-  }
+  obs_from_lora_packet(p.kind, f, sf, p.bw_hz, buf, len, rssi, snr, millis(), o);
   db::post(o);
 }
 
