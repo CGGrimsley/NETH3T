@@ -13,7 +13,7 @@ inline bool make_rid_observation(SourceType type, const uint8_t mac[6], const ui
   if (odid_decode(odid, odid_len, o.odid) != OdidErr::OK) return false;
   if (!(o.odid.has_basic || o.odid.has_loc || o.odid.has_sys || o.odid.has_opid || o.odid.has_self))
     return false;
-  if (o.odid.has_basic) cache.remember(mac, o.odid.uas_id, now);
+  if (o.odid.has_basic) cache.remember(mac, o.odid.uas_id, now, o.odid.id_type == 1);
   cache.resolve(mac, o.id);
   o.type = type;
   o.conf = Confidence::DECODED;

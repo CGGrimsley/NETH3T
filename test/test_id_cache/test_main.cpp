@@ -57,6 +57,20 @@ static void test_empty_serial_ignored() {
   TEST_ASSERT_FALSE(c.resolve(A, id));
 }
 
+static void test_serial_not_replaced_by_non_serial() {
+  IdCache c;
+  c.remember(A, "SERIAL123", 10, true);
+  c.remember(A, "CAA-REG-9", 20, false);
+  char id[24];
+  c.resolve(A, id);
+  TEST_ASSERT_EQUAL_STRING("SERIAL123", id);
+  IdCache d;
+  d.remember(B, "CAA-REG-9", 10, false);
+  d.remember(B, "SERIAL123", 20, true);
+  d.resolve(B, id);
+  TEST_ASSERT_EQUAL_STRING("SERIAL123", id);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_format_mac);
@@ -65,5 +79,6 @@ int main() {
   RUN_TEST(test_update_serial_same_mac);
   RUN_TEST(test_evicts_oldest_when_full);
   RUN_TEST(test_empty_serial_ignored);
+  RUN_TEST(test_serial_not_replaced_by_non_serial);
   return UNITY_END();
 }

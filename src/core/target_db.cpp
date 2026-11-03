@@ -15,8 +15,14 @@ void copy_str(char* dst, const char* src, size_t cap) {
   dst[cap - 1] = '\0';
 }
 
+// Eviction tier: drones/RC links outrank fixed LoRa infrastructure.
+int tier(SourceType t) {
+  return (t == SourceType::MESHTASTIC || t == SourceType::LORAWAN || t == SourceType::LORA_UNKNOWN) ? 0 : 1;
+}
+
 void merge_odid(OdidFields& d, const OdidFields& s) {
-  if (s.has_basic) {
+  // A serial-number Basic ID (id_type 1) is never replaced by another ID type.
+  if (s.has_basic && !(d.has_basic && d.id_type == 1 && s.id_type != 1)) {
     d.has_basic = true; d.id_type = s.id_type; d.ua_type = s.ua_type;
     memcpy(d.uas_id, s.uas_id, sizeof d.uas_id);
   }
@@ -57,26 +63,34 @@ int TargetDb::find_index(SourceType t, const char* id) const {
   return -1;
 }
 
-int TargetDb::alloc_slot() {
+int TargetDb::alloc_slot(const Observation& in) {
   for (size_t i = 0; i < kCapacity; i++)
     if (!used_[i]) return (int)i;
-  // Full: evict lowest confidence, then oldest last_ms; never the locked one.
+  // Full: victim = lowest (tier, confidence), stale first, then oldest; never the locked one.
   int victim = -1;
+  auto worse = [](const Target& a, const Target& v) {
+    if (tier(a.type) != tier(v.type)) return tier(a.type) < tier(v.type);
+    if (a.conf != v.conf) return a.conf < v.conf;
+    if (a.stale != v.stale) return a.stale;
+    return a.last_ms < v.last_ms;
+  };
   for (size_t i = 0; i < kCapacity; i++) {
     if ((int)i == locked_) continue;
-    if (victim < 0) { victim = (int)i; continue; }
-    const Target& a = slots_[i];
-    const Target& v = slots_[victim];
-    if (a.conf < v.conf || (a.conf == v.conf && a.last_ms < v.last_ms)) victim = (int)i;
+    if (victim < 0 || worse(slots_[i], slots_[victim])) victim = (int)i;
   }
-  if (victim >= 0) { used_[victim] = false; count_--; }
+  if (victim < 0) return -1;
+  // Never let a lower-ranked newcomer push out a higher-ranked target.
+  const Target& v = slots_[victim];
+  if (tier(in.type) < tier(v.type) || (tier(in.type) == tier(v.type) && in.conf < v.conf)) return -1;
+  used_[victim] = false;
+  count_--;
   return victim;
 }
 
 void TargetDb::ingest(const Observation& o) {
   int i = find_index(o.type, o.id);
   if (i < 0) {
-    i = alloc_slot();
+    i = alloc_slot(o);
     if (i < 0) return;
     Target& t = slots_[i];
     memset(&t, 0, sizeof t);
@@ -118,14 +132,17 @@ void TargetDb::tick(uint32_t now_ms) {
 }
 
 size_t TargetDb::snapshot(Target* out, size_t max) const {
+  // Sort slot indices (cheap), then copy each Target exactly once.
+  uint8_t idx[kCapacity];
   size_t n = 0;
-  for (size_t i = 0; i < kCapacity && n < max; i++) {
+  for (size_t i = 0; i < kCapacity; i++) {
     if (!used_[i]) continue;
-    // insertion sort into out[0..n]
     size_t j = n++;
-    while (j > 0 && before(slots_[i], out[j - 1])) { out[j] = out[j - 1]; j--; }
-    out[j] = slots_[i];
+    while (j > 0 && before(slots_[i], slots_[idx[j - 1]])) { idx[j] = idx[j - 1]; j--; }
+    idx[j] = (uint8_t)i;
   }
+  if (n > max) n = max;
+  for (size_t k = 0; k < n; k++) out[k] = slots_[idx[k]];
   return n;
 }
 

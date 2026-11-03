@@ -46,16 +46,22 @@ uint8_t g_err_run[kMaxPlans] = {};
 uint32_t g_suspend_until[kMaxPlans] = {};
 const char* volatile g_current = "-";
 volatile bool g_rx_flag = false;
+SemaphoreHandle_t g_irq = nullptr;  // given by the DIO IRQ (CAD done / RX done)
 
 struct Mx {
   Mx() { xSemaphoreTake(g_mx, portMAX_DELAY); }
   ~Mx() { xSemaphoreGive(g_mx); }
 };
 
-void IRAM_ATTR on_rx() { g_rx_flag = true; }
+void IRAM_ATTR on_rx() {
+  g_rx_flag = true;
+  BaseType_t woken = pdFALSE;
+  if (g_irq) xSemaphoreGiveFromISR(g_irq, &woken);
+  if (woken) portYIELD_FROM_ISR();
+}
 
 // ---- radio configuration cache ----
-struct Cfg { uint32_t bw; uint8_t sf; uint8_t sync; bool valid; } g_cfg = {};
+struct Cfg { uint32_t bw; uint8_t sf; uint8_t sync; bool iq; bool valid; } g_cfg = {};
 
 bool ok(int16_t st, size_t plan) {
   if (st == RADIOLIB_ERR_NONE) { g_err_run[plan] = 0; return true; }
@@ -74,13 +80,15 @@ bool tune(size_t plan, uint32_t f_khz) {
   return ok(g_radio->setFrequency(f_khz / 1000.0f), plan);
 }
 
-bool modem(size_t plan, uint32_t bw, uint8_t sf, bool hf, uint8_t sync) {
-  if (g_cfg.valid && g_cfg.bw == bw && g_cfg.sf == sf && g_cfg.sync == sync) return true;
+bool modem(size_t plan, uint32_t bw, uint8_t sf, bool hf, uint8_t sync, bool iq = false) {
+  if (g_cfg.valid && g_cfg.bw == bw && g_cfg.sf == sf && g_cfg.sync == sync && g_cfg.iq == iq) return true;
+  g_cfg.valid = false;  // a partial failure must not leave a stale cache
   spi_bus::Guard g;
   if (!ok(g_radio->setBandwidth(bw / 1000.0f, hf), plan)) return false;
   if (!ok(g_radio->setSpreadingFactor(sf), plan)) return false;
   if (!ok(g_radio->setSyncWord(sync), plan)) return false;
-  g_cfg = {bw, sf, sync, true};
+  if (!ok(g_radio->invertIQ(iq), plan)) return false;
+  g_cfg = {bw, sf, sync, iq, true};
   return true;
 }
 
@@ -102,6 +110,7 @@ void run_sweep(size_t pi) {
   if (!tune(pi, p.freqs_khz[0])) return;
   if (!modem(pi, p.hf ? 812500 : 125000, 7, p.hf, 0x12)) return;
   for (uint8_t i = 0; i < p.n_freqs; i++) {
+    if (i % 16 == 15) vTaskDelay(1);  // let other core-1 work run
     spi_bus::Guard g;
     if (!ok(g_radio->setFrequency(p.freqs_khz[i] / 1000.0f), pi)) return;
     if (!ok(g_radio->startReceive(), pi)) return;
@@ -122,10 +131,11 @@ void run_sweep(size_t pi) {
   g_row_valid[b] = true;
 }
 
-void run_cad(size_t pi, uint8_t sf, const uint32_t* freqs, uint8_t n) {
+// ExpressLRS derives invert-IQ from the binding UID, so callers alternate `iq`.
+void run_cad(size_t pi, uint8_t sf, const uint32_t* freqs, uint8_t n, bool iq) {
   const ScanPlan& p = g_plans[pi];
   if (!tune(pi, freqs[0])) return;  // set band before high-frequency bandwidths
-  if (!modem(pi, p.bw_hz, sf, p.hf, 0x12)) return;
+  if (!modem(pi, p.bw_hz, sf, p.hf, 0x12, iq)) return;
   uint32_t t0 = millis();
   while (millis() - t0 < kCadBudgetMs) {
     for (uint8_t i = 0; i < n; i++) {
@@ -133,15 +143,25 @@ void run_cad(size_t pi, uint8_t sf, const uint32_t* freqs, uint8_t n) {
       {
         spi_bus::Guard g;
         if (!ok(g_radio->setFrequency(freqs[i] / 1000.0f), pi)) return;
+        xSemaphoreTake(g_irq, 0);  // clear any stale IRQ
         if (!ok(g_radio->startChannelScan(), pi)) return;
-        uint32_t ts = millis();
-        while (!digitalRead(PIN_LR_IRQ) && millis() - ts < kCadTimeoutMs) taskYIELD();
-        if (!digitalRead(PIN_LR_IRQ)) { g_radio->standby(); ok(RADIOLIB_ERR_RX_TIMEOUT, pi); continue; }
+      }
+      // Block (not spin) until CAD done, so lower-priority work keeps running.
+      bool done = xSemaphoreTake(g_irq, pdMS_TO_TICKS(kCadTimeoutMs)) == pdTRUE || digitalRead(PIN_LR_IRQ);
+      {
+        spi_bus::Guard g;
+        if (!done) { g_radio->standby(); ok(RADIOLIB_ERR_RX_TIMEOUT, pi); continue; }
         res = g_radio->getChannelScanResult();
       }
       if (res == RADIOLIB_LORA_DETECTED) {
         float r;
-        { spi_bus::Guard g; r = g_radio->getRSSI(false, false); }
+        {
+          spi_bus::Guard g;
+          g_radio->startReceive();
+          delayMicroseconds(300);  // let the RSSI reading settle, as in the sweep
+          r = g_radio->getRSSI(false, true);
+          g_radio->standby();
+        }
         Mx m;
         g_fp.add_cad({freqs[i], sf, p.bw_hz, millis(), (int16_t)r});
         g_stats.cad_hits++;
@@ -149,6 +169,7 @@ void run_cad(size_t pi, uint8_t sf, const uint32_t* freqs, uint8_t n) {
         ok(res, pi);
       }
     }
+    vTaskDelay(1);  // one pass over the channel set done; yield
   }
   spi_bus::Guard g;
   g_radio->standby();
@@ -186,16 +207,18 @@ void post_packet(const ScanPlan& p, uint32_t f, uint8_t sf, const uint8_t* buf, 
 void run_rx(size_t pi, uint32_t f, uint8_t sf) {
   const ScanPlan& p = g_plans[pi];
   if (!tune(pi, f)) return;
-  if (!modem(pi, p.bw_hz, sf, p.hf, p.sync_word)) return;
+  if (!modem(pi, p.bw_hz, sf, p.hf, p.sync_word, false)) return;
   {
     spi_bus::Guard g;
+    xSemaphoreTake(g_irq, 0);
     if (!ok(g_radio->explicitHeader(), pi)) return;
     if (!ok(g_radio->setPreambleLength(p.kind == PlanKind::MESHTASTIC ? 16 : 8), pi)) return;
     g_rx_flag = false;
     if (!ok(g_radio->startReceive(), pi)) return;
   }
   uint32_t t0 = millis();
-  while (!g_rx_flag && millis() - t0 < p.rx_timeout_ms) vTaskDelay(pdMS_TO_TICKS(5));
+  while (!g_rx_flag && millis() - t0 < p.rx_timeout_ms)
+    xSemaphoreTake(g_irq, pdMS_TO_TICKS(p.rx_timeout_ms - (millis() - t0) + 1));
   if (g_rx_flag) {
     uint8_t buf[256];
     size_t len;
@@ -245,7 +268,7 @@ void run_plan_visit(int pi, uint32_t visit) {
   g_current = p.name;
   switch (p.mode) {
     case PlanMode::RSSI_SWEEP: run_sweep(pi); break;
-    case PlanMode::CAD: run_cad(pi, p.sfs[visit % p.n_sfs], p.freqs_khz, p.n_freqs); break;
+    case PlanMode::CAD: run_cad(pi, p.sfs[visit % p.n_sfs], p.freqs_khz, p.n_freqs, (visit / p.n_sfs) & 1); break;
     case PlanMode::RX: {
       uint32_t combo = visit % (p.n_freqs * p.n_sfs);
       run_rx(pi, p.freqs_khz[combo % p.n_freqs], p.sfs[combo / p.n_freqs]);
@@ -262,7 +285,7 @@ void run_locked(const LockState& L, uint32_t visit) {
   }
   if (L.bw == 500000 || L.bw == 812500) {
     int pi = find_plan(PlanKind::ELRS, L.bw == 812500);
-    if (usable(pi)) { g_current = "LOCK ELRS"; run_cad(pi, L.sf, g_plans[pi].freqs_khz, g_plans[pi].n_freqs); }
+    if (usable(pi)) { g_current = "LOCK ELRS"; run_cad(pi, L.sf, g_plans[pi].freqs_khz, g_plans[pi].n_freqs, visit & 1); }
     return;
   }
   for (size_t i = 0; i < g_np; i++) {
@@ -327,8 +350,11 @@ bool init(int16_t* err) {
   g_mx = xSemaphoreCreateMutex();
   spi_bus::Guard g;
   g_radio = new LR1121(new Module(PIN_LR_CS, PIN_LR_IRQ, PIN_LR_RST, PIN_LR_BUSY, SPI));
+  g_irq = xSemaphoreCreateBinary();
   g_radio->setRfSwitchTable(kRfPins, kRfTable);
-  int16_t st = g_radio->begin();
+  // MVSRLora LR1121 TCXO runs at 2.85-3.15 V (LilyGO LR1121_PingPong_2); RadioLib defaults to 1.6 V.
+  int16_t st = g_radio->begin(434.0, 125.0, 9, 7, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, 10, 8, 3.0);
+  g_radio->setRfSwitchTable(kRfPins, kRfTable);  // vendor example sets it after begin() too
   if (err) *err = st;
   g_ok = st == RADIOLIB_ERR_NONE;
   if (!g_ok) return false;

@@ -41,7 +41,7 @@ class TargetDb {
   size_t count_ = 0;
   int locked_ = -1;
   int find_index(SourceType t, const char* id) const;
-  int alloc_slot();
+  int alloc_slot(const Observation& incoming);
 };
 
 Trend trend_of(const Target& t, uint32_t now_ms);

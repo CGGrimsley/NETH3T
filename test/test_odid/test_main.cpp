@@ -177,6 +177,22 @@ static void test_odid_fuzz_no_crash() {
   TEST_PASS();
 }
 
+static void test_pack_prefers_serial_basic_id() {
+  uint8_t msgs[50], pack[53];
+  enc_basic(msgs, 1, 2, "SERIAL123");      // id_type 1 = serial
+  enc_basic(msgs + 25, 2, 2, "CAA-REG-9"); // id_type 2 = CAA registration
+  size_t n = enc_pack(pack, msgs, 2);
+  odid_decode(pack, n, f);
+  TEST_ASSERT_EQUAL_STRING("SERIAL123", f.uas_id);
+  TEST_ASSERT_EQUAL(1, f.id_type);
+  memset(&f, 0, sizeof f);
+  enc_basic(msgs, 2, 2, "CAA-REG-9");
+  enc_basic(msgs + 25, 1, 2, "SERIAL123");
+  n = enc_pack(pack, msgs, 2);
+  odid_decode(pack, n, f);
+  TEST_ASSERT_EQUAL_STRING("SERIAL123", f.uas_id);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_basic_id);
@@ -196,5 +212,6 @@ int main() {
   RUN_TEST(test_too_short_single);
   RUN_TEST(test_unknown_type);
   RUN_TEST(test_odid_fuzz_no_crash);
+  RUN_TEST(test_pack_prefers_serial_basic_id);
   return UNITY_END();
 }

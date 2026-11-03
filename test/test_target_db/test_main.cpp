@@ -169,6 +169,40 @@ static void test_remoteid_wifi_and_ble_merge_by_serial() {
   TEST_ASSERT_NOT_NULL(db->find(SourceType::REMOTEID_BLE, "SN9"));
 }
 
+static void test_full_table_keeps_drone_over_lora_nodes() {
+  char id[24];
+  // One older Remote ID drone, then 127 newer DECODED LoRaWAN nodes fill the table.
+  db->ingest(obs(SourceType::REMOTEID_BLE, "DRONE", -80, 0, Confidence::DECODED));
+  for (int i = 0; i < 127; i++) {
+    snprintf(id, sizeof id, "DA:%08X", i);
+    db->ingest(obs(SourceType::LORAWAN, id, -90, 100 + i, Confidence::DECODED));
+  }
+  db->ingest(obs(SourceType::LORAWAN, "DA:NEW", -90, 5000, Confidence::DECODED));
+  TEST_ASSERT_NOT_NULL(db->find(SourceType::REMOTEID_BLE, "DRONE"));
+  TEST_ASSERT_NOT_NULL(db->find(SourceType::LORAWAN, "DA:NEW"));
+  TEST_ASSERT_NULL(db->find(SourceType::LORAWAN, "DA:00000000"));
+}
+
+static void test_full_table_of_drones_drops_heuristic_newcomer() {
+  char id[24];
+  for (int i = 0; i < 128; i++) {
+    snprintf(id, sizeof id, "SN%d", i);
+    db->ingest(obs(SourceType::REMOTEID_BLE, id, -80, (uint32_t)i, Confidence::DECODED));
+  }
+  db->ingest(obs(SourceType::DRONE_WIFI, "HOTSPOT", -60, 5000));
+  TEST_ASSERT_NULL(db->find(SourceType::DRONE_WIFI, "HOTSPOT"));
+  TEST_ASSERT_NOT_NULL(db->find(SourceType::REMOTEID_BLE, "SN0"));
+}
+
+static void test_basic_id_serial_not_overwritten_by_caa_id() {
+  Observation a = obs(SourceType::REMOTEID_BLE, "SN1", -70, 0, Confidence::DECODED);
+  a.odid.has_basic = true; a.odid.id_type = 1; strcpy(a.odid.uas_id, "SERIAL123");
+  Observation b = obs(SourceType::REMOTEID_BLE, "SN1", -70, 10, Confidence::DECODED);
+  b.odid.has_basic = true; b.odid.id_type = 2; strcpy(b.odid.uas_id, "CAA-REG-9");
+  db->ingest(a); db->ingest(b);
+  TEST_ASSERT_EQUAL_STRING("SERIAL123", db->find(SourceType::REMOTEID_BLE, "SN1")->odid.uas_id);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_merge_same_type_and_id);
@@ -186,5 +220,8 @@ int main() {
   RUN_TEST(test_odid_fields_merge);
   RUN_TEST(test_conf_upgrades_never_downgrades);
   RUN_TEST(test_remoteid_wifi_and_ble_merge_by_serial);
+  RUN_TEST(test_full_table_keeps_drone_over_lora_nodes);
+  RUN_TEST(test_full_table_of_drones_drops_heuristic_newcomer);
+  RUN_TEST(test_basic_id_serial_not_overwritten_by_caa_id);
   return UNITY_END();
 }

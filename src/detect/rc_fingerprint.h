@@ -23,4 +23,12 @@ class RcFingerprint {
   size_t cad_n_ = 0, cad_head_ = 0;
   HotBin hot_[kRing];
   size_t hot_n_ = 0, hot_head_ = 0;
+  // Newest hit already reported per ELRS (bw, sf) group and per FHSS band, so a
+  // window is only re-reported when new hits arrived.
+  struct Emitted { uint32_t bw_hz; uint8_t sf; uint32_t t_ms; };
+  Emitted emitted_[16] = {};
+  size_t n_emitted_ = 0;
+  uint32_t fhss_emitted_t_[2] = {};
+  bool fhss_emitted_[2] = {};
+  bool should_emit(uint32_t bw, uint8_t sf, uint32_t newest_t);
 };

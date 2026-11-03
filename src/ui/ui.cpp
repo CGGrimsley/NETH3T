@@ -148,15 +148,20 @@ void ui_task(void*) {
   for (;;) {
     uint32_t now = millis();
     Arduino_Canvas* c = display::canvas();
-    size_t n = db::snapshot(g_snap, cap);
-    // Hide LoRa infrastructure nodes when asked to.
-    if (!settings::get().show_lora_nodes) {
-      size_t k = 0;
-      for (size_t i = 0; i < n; i++)
-        if (!is_lora_node(g_snap[i].type)) g_snap[k++] = g_snap[i];
-      n = k;
+    // The list refreshes at 4 Hz; the Hunt screen reads its locked target every frame.
+    static uint8_t frame = 0;
+    if (frame++ % 5 == 0) {
+      size_t n = db::snapshot(g_snap, cap);
+      // Hide LoRa infrastructure nodes when asked to.
+      if (!settings::get().show_lora_nodes) {
+        size_t k = 0;
+        for (size_t i = 0; i < n; i++)
+          if (!is_lora_node(g_snap[i].type)) g_snap[k++] = g_snap[i];
+        n = k;
+      }
+      g_n = n;
     }
-    g_n = n;
+    size_t n = g_n;
     Input in = read_input();
     bool consumed = banner_tap(in);
     run_alerts(now);
@@ -228,7 +233,7 @@ uint16_t dim(uint16_t c) { return (uint16_t)((c >> 1) & 0x7BEF); }
 namespace ui {
 void start() {
   g_banner_mx = xSemaphoreCreateMutex();
-  xTaskCreatePinnedToCore(ui_task, "ui", 8192, nullptr, 1, nullptr, 1);
+  xTaskCreatePinnedToCore(ui_task, "ui", 8192, nullptr, 3, nullptr, 1);  // above LoRa (2)
 }
 void go(Screen s) { g_screen = s; }
 Screen current() { return g_screen; }

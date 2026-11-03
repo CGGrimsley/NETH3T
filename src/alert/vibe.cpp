@@ -25,8 +25,8 @@ void task(void*) {
       uint16_t ms = g_once_ms;
       g_once_ms = 0;
       burst(ms);
-    } else if (g_rate_x10) {
-      uint32_t period = 10000 / g_rate_x10;
+    } else if (uint16_t rate = g_rate_x10) {  // read once: stop() may race
+      uint32_t period = 10000 / rate;
       burst(40);
       vTaskDelay(pdMS_TO_TICKS(period > 40 ? period - 40 : 1));
     } else {

@@ -74,12 +74,23 @@ static void test_elrs_suppresses_fhss_same_band() {
   TEST_ASSERT_EQUAL(1, n);
   TEST_ASSERT_EQUAL((int)SourceType::ELRS, (int)out[0].type);
 }
-static void test_rssi_is_max_of_window() {
+static void test_rssi_is_newest_hit() {
   const uint32_t ch[4] = {903500, 910100, 915500, 922100};
   const int16_t r[4] = {-95, -60, -88, -90};
   for (int i = 0; i < 4; i++) cad(ch[i], 7, 500000, 100 + i * 100, r[i]);
   fp->evaluate(600, out, 8);
-  TEST_ASSERT_EQUAL(-60, out[0].rssi_dbm);
+  TEST_ASSERT_EQUAL(-90, out[0].rssi_dbm);
+}
+static void test_no_reemit_without_new_hits() {
+  const uint32_t ch[4] = {903500, 910100, 915500, 922100};
+  for (int i = 0; i < 4; i++) cad(ch[i], 7, 500000, 100 + i * 100);
+  TEST_ASSERT_EQUAL(1, fp->evaluate(600, out, 8));
+  TEST_ASSERT_EQUAL(0, fp->evaluate(700, out, 8));
+  cad(903500, 7, 500000, 750);
+  TEST_ASSERT_EQUAL(1, fp->evaluate(800, out, 8));
+  for (int i = 0; i < 8; i++) fp->add_hot({(uint32_t)(863000 + i * 800), (uint32_t)(900 + i * 10), -80});
+  TEST_ASSERT_EQUAL(1, fp->evaluate(1000, out, 8));  // FHSS868 once
+  TEST_ASSERT_EQUAL(0, fp->evaluate(1100, out, 8));
 }
 static void test_recent_cad_returns_window() {
   cad(903500, 7, 500000, 100);
@@ -106,7 +117,8 @@ int main() {
   RUN_TEST(test_fhss_detected);
   RUN_TEST(test_static_carrier_not_fhss);
   RUN_TEST(test_elrs_suppresses_fhss_same_band);
-  RUN_TEST(test_rssi_is_max_of_window);
+  RUN_TEST(test_rssi_is_newest_hit);
+  RUN_TEST(test_no_reemit_without_new_hits);
   RUN_TEST(test_recent_cad_returns_window);
   RUN_TEST(test_ring_overflow_safe);
   return UNITY_END();

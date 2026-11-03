@@ -34,9 +34,10 @@ void task(void*) {
       play(1800, 80);
       continue;
     }
-    if (g_tone && g_pulse_x10) {
-      uint32_t period = 10000 / g_pulse_x10;  // ms
-      play(g_tone, 30);
+    uint16_t tone = g_tone, pulse = g_pulse_x10;  // read once: stop() may race
+    if (tone && pulse) {
+      uint32_t period = 10000 / pulse;  // ms
+      play(tone, 30);
       play(0, period > 30 ? period - 30 : 0);
     } else {
       play(0, 20);  // keep DMA fed with silence

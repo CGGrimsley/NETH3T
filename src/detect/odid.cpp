@@ -44,6 +44,8 @@ OdidErr decode_one(const uint8_t* m, OdidFields& f) {
   uint8_t type = m[0] >> 4;
   switch (type) {
     case 0x0: {  // Basic ID
+      // Up to two Basic IDs may be sent; keep the serial number (id_type 1).
+      if (f.has_basic && f.id_type == 1 && (m[1] >> 4) != 1) return OdidErr::OK;
       f.has_basic = true;
       f.id_type = m[1] >> 4;
       f.ua_type = m[1] & 0x0F;
