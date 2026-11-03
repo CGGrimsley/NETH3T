@@ -34,6 +34,7 @@ int16_t g_tx0, g_ty0, g_tx, g_ty;
 Input read_input() {
   Input in = {};
   in.btn = buttons::poll();
+  in.home = touch::home_pressed();
   int16_t x, y;
   bool down = touch::read(x, y);
   if (down) {
@@ -71,6 +72,38 @@ void draw_status(Arduino_Canvas* c) {
   c->setCursor(160, 8);
   if (pct < 0) c->print("bat --");
   else c->printf("%s%3d%%", power::charging() ? "+" : " ", pct);
+}
+
+const Screen kTabs[3] = {Screen::TARGETS, Screen::SPECTRUM, Screen::SETTINGS};
+const char* const kTabNames[3] = {"Targets", "Spectrum", "Settings"};
+
+void draw_tabs(Arduino_Canvas* c) {
+  c->fillRect(0, kTabY, TFT_W, kTabH, kPanel);
+  c->drawFastHLine(0, kTabY, TFT_W, kDim);
+  int w = TFT_W / 3;
+  for (int i = 0; i < 3; i++) {
+    bool on = g_screen == kTabs[i];
+    if (on) c->fillRect(i * w + 2, kTabY + 3, w - 4, kTabH - 6, kDim);
+    c->setTextSize(on ? 2 : 1);
+    c->setTextColor(on ? kText : kGrey);
+    int tw = (int)strlen(kTabNames[i]) * (on ? 12 : 6);
+    c->setCursor(i * w + (w - tw) / 2, kTabY + (on ? 14 : 18));
+    c->print(kTabNames[i]);
+  }
+}
+
+// Home key or a tab tap switches screens before the screen sees the input.
+bool handle_nav(const Input& in) {
+  if (in.home) {
+    if (g_screen == Screen::HUNT) ui::unlock_target();
+    g_screen = Screen::TARGETS;
+    return true;
+  }
+  if (g_screen != Screen::HUNT && in.tap && in.y >= kTabY) {
+    g_screen = kTabs[constrain(in.x / (TFT_W / 3), 0, 2)];
+    return true;
+  }
+  return false;
 }
 
 void draw_banner(Arduino_Canvas* c, uint32_t now) {
@@ -163,7 +196,7 @@ void ui_task(void*) {
     }
     size_t n = g_n;
     Input in = read_input();
-    bool consumed = banner_tap(in);
+    bool consumed = handle_nav(in) || banner_tap(in);
     run_alerts(now);
     bool hunting = false;
 
@@ -188,6 +221,7 @@ void ui_task(void*) {
         break;
     }
     run_hunt_feedback(hunting ? &locked : nullptr, now);
+    if (g_screen != Screen::HUNT) draw_tabs(c);
     draw_status(c);
     draw_banner(c, now);
     display::flush();

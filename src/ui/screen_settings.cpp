@@ -20,7 +20,7 @@ const char* const kLabels[kItems] = {
     "Alerts",     "Volume",        "Brightness",
 };
 constexpr int kRowH = 24, kListY = kStatusH + 40, kAboutRows = 6;
-constexpr int kVisible = (TFT_H - kListY - kAboutRows * 12 - 8) / kRowH;
+constexpr int kVisible = (kTabY - kListY - kAboutRows * 12 - 8) / kRowH;
 int g_sel = 0, g_top = 0;
 
 bool* flag(Settings& s, uint8_t i) {
@@ -104,7 +104,7 @@ void draw(Arduino_Canvas* c) {
   }
   // About / debug
   lora_scanner::Stats st = lora_scanner::stats();
-  int y = TFT_H - kAboutRows * 12 - 4;
+  int y = kTabY - kAboutRows * 12 - 4;
   c->setTextSize(1);
   c->setTextColor(kGrey);
   c->setCursor(6, y); c->printf("%s", lora_scanner::version()); y += 12;

@@ -93,7 +93,8 @@ behind you, so the reading is strongest when you face the transmitter.
 | BOOT (bottom-left) | Back / leave Hunt | — |
 | Top-right | Up | Lock selected target (Hunt) / change setting |
 | Bottom-right | Down | Settings |
-| Touch | Tap a row to hunt it; tap the alert banner; swipe left for Spectrum; **Back** (top-right) or any swipe leaves Hunt / Spectrum / Settings | |
+| Touch | Tap a row to hunt it; tap the alert banner; bottom tabs switch **Targets / Spectrum / Settings**; **Back** (top-right) leaves Hunt | |
+| Home key (printed circle under the screen) | Back to Targets from anywhere; releases a Hunt lock | |
 
 **Alerts**
 

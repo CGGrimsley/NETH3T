@@ -10,6 +10,7 @@ struct Input {
   bool tap;
   int16_t x, y;
   int8_t swipe;  // -1 left, +1 right, 0 none
+  bool home;     // touch home key
 };
 
 namespace ui_color {
@@ -28,6 +29,9 @@ constexpr uint16_t kBlue = rgb(0x3E, 0x63, 0xDD);
 }  // namespace ui_color
 
 constexpr int kStatusH = 24;
+
+// Bottom tab bar on Targets / Spectrum / Settings (not on Hunt).
+constexpr int kTabH = 44, kTabY = TFT_H - kTabH;
 
 // Touch "Back" button, top-right under the status bar, on every non-home screen.
 constexpr int kBackX = TFT_W - 62, kBackY = kStatusH + 2, kBackW = 58, kBackH = 30;

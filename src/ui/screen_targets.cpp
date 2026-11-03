@@ -7,7 +7,7 @@ using namespace ui_color;
 namespace {
 int g_sel = 0, g_top = 0;
 constexpr int kRowH = 44, kListY = kStatusH + 2;
-constexpr int kVisible = (TFT_H - kListY) / kRowH;
+constexpr int kVisible = (kTabY - kListY) / kRowH;
 
 void clamp(size_t n) {
   if (n == 0) { g_sel = g_top = 0; return; }
@@ -72,7 +72,7 @@ void input(const Input& in, const Target* t, size_t n) {
   if (in.swipe == -1) { ui::go(Screen::SPECTRUM); return; }
   if (n == 0) return;
   if (in.btn == Btn::UP_LONG) { open(t[g_sel]); return; }
-  if (in.tap && in.y >= kListY) {
+  if (in.tap && in.y >= kListY && in.y < kTabY) {
     int idx = g_top + (in.y - kListY) / kRowH;
     if (idx < (int)n) { g_sel = idx; open(t[idx]); }
   }

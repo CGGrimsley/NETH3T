@@ -14,6 +14,8 @@ touch/button test, so for step 1 check the boot screen and serial output
 
 ## 1. Bring-up
 
+Startup shows the Brushbeater logo and "NETH3T" for about 2 s with the boot results underneath.
+
 | Step | Expected |
 |---|---|
 | Power on | Boot screen lists `PMU OK`, `DISPLAY OK`, `TOUCH OK`; serial prints matching `BOOT … OK` lines |
@@ -83,3 +85,11 @@ touch/button test, so for step 1 check the boot screen and serial output
 | Serial: `time <unix seconds>` (e.g. paste the output of `date +%s`) | `OK time set (RTC updated)`; new rows carry `iso_time`; still correct after a power-cycle |
 | Serial: `dump` / `stats` / `region eu` | Target table / counters / region switch confirmed with `OK` |
 | Boot without a card | `BOOT SD FAIL`, `SD-`; everything else works and rows still go to serial |
+
+## 8. Navigation
+
+| Step | Expected |
+|---|---|
+| Tap each bottom tab | Switches between Targets, Spectrum and Settings; the current tab is highlighted |
+| Open Hunt on any target, then press the Home key (printed circle under the screen) | Returns to Targets; the radios stop focusing on that target |
+| On Hunt, tap **Back** (top-right) | Returns to Targets |
