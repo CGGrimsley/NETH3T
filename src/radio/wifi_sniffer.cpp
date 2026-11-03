@@ -4,6 +4,7 @@
 #include <esp_wifi.h>
 #include <cstring>
 #include "core/db_task.h"
+#include "core/health.h"
 #include "detect/drone_vendors.h"
 #include "detect/id_cache.h"
 #include "detect/wifi_frames.h"
@@ -92,6 +93,7 @@ void parse_task(void*) {
 void hop_task(void*) {
   size_t i = 0;
   for (;;) {
+    health::beat(health::WIFI);
     uint8_t ch = g_pinned ? g_pinned : kHop[i++ % sizeof kHop];
     if (ch != g_ch) {
       esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);

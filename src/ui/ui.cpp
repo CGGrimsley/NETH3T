@@ -3,6 +3,7 @@
 #include <cstring>
 #include "core/boot.h"
 #include "core/db_task.h"
+#include "core/health.h"
 #include "core/power.h"
 #include "radio/ble_scanner.h"
 #include "radio/lora_scanner.h"
@@ -145,6 +146,7 @@ void ui_task(void*) {
     draw_status(c);
     draw_banner(c, now);
     display::flush();
+    health::check();
     vTaskDelay(pdMS_TO_TICKS(50));
   }
 }

@@ -42,3 +42,13 @@ Run these on the real device after flashing. Open the serial monitor
 | Tap RESET PEAK | Peak line drops to the current reading |
 | Detail panel | Shows the app's drone and pilot coordinates; "no fix" when the app sends 0,0 |
 | BOOT button | Returns to Targets and releases the radio lock |
+
+## 5. Spectrum and Settings
+
+| Step | Expected |
+|---|---|
+| On Targets, swipe left | Spectrum screen; waterfall scrolls as sweeps arrive; up/down (or tap) cycles 915/868 → 433 → 2.4 GHz |
+| Key an ELRS TX | Bright streaks across the 915 (or 868) waterfall; `SFn` ticks appear under it |
+| Long-press bottom-right → Settings; change Region to EU | Band 0 axis now reads 863.0 … 870.0; back to FCC reads 902.0 … 928.0 |
+| Toggle a few settings, power-cycle | Settings are unchanged after reboot |
+| About rows | LR11x0 version, CAD/RX counters, `restarts 0` |

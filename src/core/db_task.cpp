@@ -1,6 +1,7 @@
 #include "core/db_task.h"
 #include <Arduino.h>
 #include <new>
+#include "core/health.h"
 
 namespace {
 QueueHandle_t g_q = nullptr;
@@ -18,6 +19,7 @@ void task(void*) {
   Observation o;
   uint32_t last_tick = 0;
   for (;;) {
+    health::beat(health::DB);
     if (xQueueReceive(g_q, &o, pdMS_TO_TICKS(200)) == pdTRUE) {
       { Lock l; g_db->ingest(o); }
       if (g_sink) g_sink(o);

@@ -5,6 +5,7 @@
 #include <cstring>
 #include "board_pins.h"
 #include "core/db_task.h"
+#include "core/health.h"
 #include "core/spi_bus.h"
 #include "detect/lora_headers.h"
 #include "detect/noise_floor.h"
@@ -281,6 +282,7 @@ void run_locked(const LockState& L, uint32_t visit) {
 void scanner_task(void*) {
   uint32_t visit = 0, mesh_rot = 0;
   for (;;) {
+    health::beat(health::LORA);
     if (g_region_dirty) {
       g_region_dirty = false;
       g_np = build_plans(g_region, g_plans, kMaxPlans);
