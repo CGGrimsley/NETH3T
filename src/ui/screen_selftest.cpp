@@ -6,7 +6,7 @@
 using namespace ui_color;
 
 namespace {
-constexpr int kRowH = 24, kListY = kStatusH + 44;
+constexpr int kRowH = 22, kListY = kStatusH + 44;  // 18 rows end at y 460
 
 uint16_t color_of(StResult r) {
   switch (r) {

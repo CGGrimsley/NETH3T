@@ -24,6 +24,12 @@ ScanPlan blank(const char* name, PlanMode mode, PlanKind kind) {
 // (stride widened to fit when capped).
 ScanPlan sweep(const char* name, uint32_t f0, uint32_t f1, uint32_t step, bool hf) {
   ScanPlan p = blank(name, PlanMode::RSSI_SWEEP, PlanKind::SWEEP);
+  p.hf = hf;
+  if (f1 <= f0 || step == 0) {  // degenerate range: one point, never divide by zero
+    p.freqs_khz[0] = f0;
+    p.n_freqs = 1;
+    return p;
+  }
   uint32_t span = f1 - f0;
   uint32_t n = span / step + 1;
   if (n > kMaxPoints) n = kMaxPoints;

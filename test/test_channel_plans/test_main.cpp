@@ -125,6 +125,14 @@ static void test_make_sweep_plan_points() {
   TEST_ASSERT_EQUAL(80, h.n_freqs);
 }
 
+static void test_make_sweep_plan_degenerate_range() {
+  ScanPlan p = make_sweep_plan("Z", 0, 0, 50, false);
+  TEST_ASSERT_EQUAL(1, p.n_freqs);
+  ScanPlan q = make_sweep_plan("Z", 915000, 910000, 50, false);
+  TEST_ASSERT_EQUAL(1, q.n_freqs);
+  TEST_ASSERT_EQUAL_UINT32(915000, q.freqs_khz[0]);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_meshtastic_longfast_us_906875);
@@ -139,5 +147,6 @@ int main() {
   RUN_TEST(test_sweep_respects_80_point_cap);
   RUN_TEST(test_build_plans_respects_max);
   RUN_TEST(test_make_sweep_plan_points);
+  RUN_TEST(test_make_sweep_plan_degenerate_range);
   return UNITY_END();
 }

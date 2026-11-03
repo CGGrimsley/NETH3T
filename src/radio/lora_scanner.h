@@ -12,7 +12,7 @@ void set_region(Region r);  // plans rebuilt at the next plan boundary
 void lock(uint32_t freq_khz, uint8_t sf, uint32_t bw_hz, bool fhss);
 void unlock();
 
-struct SweepRow { uint32_t f0_khz, step_khz; uint8_t n; int8_t dbm[80]; uint32_t t_ms; bool hf; int16_t floor_dbm; };
+struct SweepRow { uint32_t f0_khz, f1_khz, step_khz; uint8_t n; int8_t dbm[80]; uint32_t t_ms; bool hf; int16_t floor_dbm; };
 bool latest_sweep(uint8_t band /*0=915|868, 1=433, 2=2400*/, SweepRow& out);
 
 struct Stats { uint32_t cad_hits, rx_pkts, errors, suspended, cad_runs, sweeps; };

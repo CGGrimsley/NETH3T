@@ -66,6 +66,12 @@ int8_t PeakHold::at(uint8_t i) const {
   return (int8_t)(v < -127 ? -127 : (v > 0 ? 0 : v));
 }
 
+bool sweep_matches(uint32_t f0, uint32_t f_last, uint8_t n, const ScanPlan& want) {
+  return n == want.n_freqs && n > 0 && f0 == want.freqs_khz[0] && f_last == want.freqs_khz[n - 1];
+}
+
+uint32_t snap_khz(uint32_t f, uint32_t grid) { return grid ? (f + grid / 2) / grid * grid : f; }
+
 void touch_to_landscape(int16_t px, int16_t py, uint8_t rotation, int16_t* lx, int16_t* ly) {
   // Inverse of Adafruit-GFX rotation on a 222x480 portrait panel.
   if (rotation == 3) {

@@ -87,6 +87,21 @@ static void test_touch_to_landscape_corners() {
   TEST_ASSERT_EQUAL(0, x); TEST_ASSERT_EQUAL(221, y);
 }
 
+static void test_sweep_matches_requires_same_range() {
+  ScanPlan zoom = make_sweep_plan("", 902000, 915000, 50, false);
+  ScanPlan full = make_sweep_plan("", 902000, 928000, 50, false);
+  TEST_ASSERT_EQUAL(full.n_freqs, zoom.n_freqs);  // same f0 and n: the old match could not tell them apart
+  TEST_ASSERT_TRUE(sweep_matches(902000, zoom.freqs_khz[zoom.n_freqs - 1], zoom.n_freqs, zoom));
+  TEST_ASSERT_FALSE(sweep_matches(902000, full.freqs_khz[full.n_freqs - 1], full.n_freqs, zoom));
+  ScanPlan f24 = make_sweep_plan("", 2400000, 2480000, 200, true);
+  TEST_ASSERT_FALSE(sweep_matches(2400000, 2479000, 80, f24));
+}
+static void test_snap_to_grid() {
+  TEST_ASSERT_EQUAL_UINT32(915000, snap_khz(915040, 200));
+  TEST_ASSERT_EQUAL_UINT32(915200, snap_khz(915110, 200));
+  TEST_ASSERT_EQUAL_UINT32(902000, snap_khz(902000, 200));
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_band_limits);
@@ -99,5 +114,7 @@ int main() {
   RUN_TEST(test_peak_hold_max_and_decay);
   RUN_TEST(test_peak_resets_on_range_change);
   RUN_TEST(test_touch_to_landscape_corners);
+  RUN_TEST(test_sweep_matches_requires_same_range);
+  RUN_TEST(test_snap_to_grid);
   return UNITY_END();
 }

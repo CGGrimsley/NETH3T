@@ -30,5 +30,11 @@ class PeakHold {
   uint32_t last_ms_ = 0;
 };
 
+// True if a sweep row (first/last frequency, point count) came from `want`.
+bool sweep_matches(uint32_t f0_khz, uint32_t f_last_khz, uint8_t n, const ScanPlan& want);
+// Rounds to the nearest multiple of `grid_khz` (used to keep zoomed hot bins on
+// the normal 200 kHz grid for the FHSS detector).
+uint32_t snap_khz(uint32_t f_khz, uint32_t grid_khz);
+
 // Portrait touch (222x480) to landscape canvas coordinates (480x222) for GFX rotation 1 or 3.
 void touch_to_landscape(int16_t px, int16_t py, uint8_t rotation, int16_t* lx, int16_t* ly);

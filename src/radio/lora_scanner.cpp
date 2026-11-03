@@ -8,6 +8,8 @@
 #include "core/health.h"
 #include "core/spi_bus.h"
 #include "detect/obs_build.h"
+#include "detect/schedule.h"
+#include "ui/spectrum_view.h"
 #include "detect/noise_floor.h"
 #include "settings/settings.h"
 
@@ -100,10 +102,14 @@ uint8_t band_of(const ScanPlan& p) {
 }
 
 // ---- modes ----
-void run_sweep(size_t pi) {
+// `focus` rows (Spectrum zoom) are displayed but never change the band's noise
+// floor, and their hot bins are snapped to the normal 200 kHz grid so a single
+// wide emitter can't look like a hopping link at 50 kHz resolution.
+void run_sweep(size_t pi, bool focus = false) {
   const ScanPlan& p = g_plans[pi];
   lora_scanner::SweepRow row = {};
   row.f0_khz = p.freqs_khz[0];
+  row.f1_khz = p.freqs_khz[p.n_freqs - 1];
   row.step_khz = p.n_freqs > 1 ? p.freqs_khz[1] - p.freqs_khz[0] : 0;
   row.n = p.n_freqs;
   row.hf = p.hf;
@@ -125,10 +131,16 @@ void run_sweep(size_t pi) {
   uint32_t now = millis();
   row.t_ms = now;
   Mx m;
-  g_nf[b].add_sweep(row.dbm, row.n);
+  if (!focus) g_nf[b].add_sweep(row.dbm, row.n);
   row.floor_dbm = g_nf[b].floor_dbm();
-  for (uint8_t i = 0; i < row.n; i++)
-    if (g_nf[b].hot(row.dbm[i])) g_fp.add_hot({p.freqs_khz[i], now, row.dbm[i]});
+  uint32_t last_snapped = 0;
+  for (uint8_t i = 0; i < row.n; i++) {
+    if (!g_nf[b].hot(row.dbm[i])) continue;
+    uint32_t f = focus ? snap_khz(p.freqs_khz[i], 200) : p.freqs_khz[i];
+    if (focus && f == last_snapped) continue;  // one hot bin per grid cell
+    last_snapped = f;
+    g_fp.add_hot({f, now, row.dbm[i]});
+  }
   g_rows[b] = row;
   g_row_valid[b] = true;
   g_stats.sweeps++;
@@ -285,6 +297,7 @@ void run_locked(const LockState& L, uint32_t visit) {
 
 void scanner_task(void*) {
   uint32_t visit = 0, mesh_rot = 0;
+  Scheduler sched;
   for (;;) {
     health::beat(health::LORA);
     if (g_region_dirty) {
@@ -303,15 +316,16 @@ void scanner_task(void*) {
     visit++;
     if (L.on) {
       run_locked(L, visit);
-    } else if (F.on && (visit & 1) && g_np < kFocusSlot) {
+    } else if (SchedStep st = sched.next(F.on && g_np < kFocusSlot); st.focus) {
       // Spectrum screen open: re-sweep the viewed range every other visit.
       bool hf = F.band == 2;
       g_plans[kFocusSlot] = make_sweep_plan("SPECTRUM", F.f0, F.f1, hf ? 200 : 50, hf);
-      run_plan_visit(kFocusSlot, visit);
+      if (usable(kFocusSlot)) { g_current = "SPECTRUM"; run_sweep(kFocusSlot, true); }
     } else {
-      switch (visit % 7) {
-        case 0: run_plan_visit(find_plan(PlanKind::SWEEP, false, 0), visit); break;
-        case 1: if (s.en_elrs) run_plan_visit(find_plan(PlanKind::ELRS, false), visit / 7); break;
+      uint32_t rot = st.rot;
+      switch (st.slot) {
+        case 0: run_plan_visit(find_plan(PlanKind::SWEEP, false, 0), rot); break;
+        case 1: if (s.en_elrs) run_plan_visit(find_plan(PlanKind::ELRS, false), rot); break;
         case 2:
           if (s.en_mesh) {
             int idx[4], n = 0;
@@ -320,10 +334,10 @@ void scanner_task(void*) {
             if (n) run_plan_visit(idx[mesh_rot++ % n], 0);
           }
           break;
-        case 3: run_plan_visit(find_plan(PlanKind::SWEEP, true), visit); break;
-        case 4: if (s.en_elrs) run_plan_visit(find_plan(PlanKind::ELRS, true), visit / 7); break;
-        case 5: if (s.en_lorawan) run_plan_visit(find_plan(PlanKind::LORAWAN, false), visit / 7); break;
-        case 6: run_plan_visit(find_plan(PlanKind::SWEEP, false, 1), visit); break;
+        case 3: run_plan_visit(find_plan(PlanKind::SWEEP, true), rot); break;
+        case 4: if (s.en_elrs) run_plan_visit(find_plan(PlanKind::ELRS, true), rot); break;
+        case 5: if (s.en_lorawan) run_plan_visit(find_plan(PlanKind::LORAWAN, false), rot); break;
+        case 6: run_plan_visit(find_plan(PlanKind::SWEEP, false, 1), rot); break;
       }
     }
     evaluate_fingerprints();

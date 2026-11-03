@@ -76,7 +76,7 @@ void ingest() {
   if (!lora_scanner::latest_sweep(g_band, r) || r.t_ms == g_last_t) return;
   const Span& s = g_span[g_band];
   ScanPlan want = make_sweep_plan("", s.f0_khz, s.f1_khz, min_step(), g_band == 2);
-  if (r.f0_khz != s.f0_khz || r.n != want.n_freqs) return;
+  if (!sweep_matches(r.f0_khz, r.f1_khz, r.n, want)) return;
   g_last_t = r.t_ms;
   g_row = r;
   g_have_row = true;
@@ -139,7 +139,7 @@ void enter() {
 void leave() { lora_scanner::clear_focus(); }
 
 void draw(Arduino_Canvas* c) {
-  if (g_region != settings::get().region) enter();  // region changed elsewhere
+  if (!g_span_init || g_region != settings::get().region) enter();  // first frame / region changed
   ingest();
   const Span& s = g_span[g_band];
   uint32_t span = s.f1_khz - s.f0_khz;
@@ -245,7 +245,9 @@ void draw(Arduino_Canvas* c) {
 }
 
 void input(const Input& in) {
-  if (in.btn == Btn::BACK || in.swipe != 0) { ui::go(Screen::TARGETS); return; }
+  // Swipes are ignored here: gestures are measured in portrait, so a drag on the
+  // landscape trace would otherwise read as a swipe and exit.
+  if (in.btn == Btn::BACK) { ui::go(Screen::TARGETS); return; }
   if (in.btn == Btn::UP) zoom(true);
   if (in.btn == Btn::DOWN) zoom(false);
   if (in.btn == Btn::DOWN_LONG) change_band();

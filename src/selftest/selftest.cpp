@@ -54,6 +54,8 @@ void prefix(Observation& o) {
 }
 
 // Posts a test observation and waits up to 1 s for it to reach the table.
+// On timeout the (late) target is removed so nothing leaks; the end-of-run
+// sweep catches anything that arrives later still.
 bool inject(Observation& o, Target* out) {
   prefix(o);
   if (!db::post(o)) return false;
@@ -61,14 +63,31 @@ bool inject(Observation& o, Target* out) {
     vTaskDelay(pdMS_TO_TICKS(50));
     if (db::get(o.type, o.id, out)) return true;
   }
+  db::remove(o.type, o.id);
   return false;
+}
+
+// Removes every TEST- target still in the table.
+void remove_all_test_targets() {
+  vTaskDelay(pdMS_TO_TICKS(300));  // let any queued test observation land first
+  Target* snap = (Target*)heap_caps_malloc(sizeof(Target) * TargetDb::kCapacity, MALLOC_CAP_SPIRAM);
+  if (!snap) return;
+  size_t n = db::snapshot(snap, TargetDb::kCapacity);
+  for (size_t i = 0; i < n; i++)
+    if (is_test_id(snap[i].id)) db::remove(snap[i].type, snap[i].id);
+  heap_caps_free(snap);
 }
 
 bool near(double a, double b) { return fabs(a - b) <= 1e-6; }
 
 const DetectFlags kAll = {true, true, true};
-Target g_t1, g_t4, g_t6;   // kept for P8
-Observation g_o1;          // kept for P9
+// Results kept for P8/P9; the *_ok flags stop a stale earlier run from passing them.
+Target g_t1, g_t4, g_t6;
+Observation g_o1;
+bool g_t1_ok, g_t4_ok, g_t6_ok;
+// Large ELRS check buffers live here, not on the 16 KB task stack.
+RcFingerprint g_fp;
+Observation g_fp_out[4];
 
 void check_rid_wifi(size_t item, void (*vec)(Vec&)) {
   Vec v;
@@ -84,7 +103,7 @@ void check_rid_wifi(size_t item, void (*vec)(Vec&)) {
             near(t.odid.op_lat, kVecPilotLat) && near(t.odid.op_lon, kVecPilotLon);
   if (ok) set(item, StResult::PASS, "serial, drone + pilot position OK");
   else set(item, StResult::FAIL, "wrong fields in target");
-  if (item == 8) { g_t1 = t; g_o1 = copy; prefix(g_o1); }
+  if (item == 8 && ok) { g_t1 = t; g_o1 = copy; prefix(g_o1); g_t1_ok = true; }
   db::remove(t.type, t.id);
 }
 
@@ -99,12 +118,18 @@ void check_ble() {
   bool ok_b = obs_from_ble(kVecBleMac, v.data, v.len, -60, millis(), kAll, ids, b);
   if (!ok_a || !ok_b) { set(10, StResult::FAIL, "advert not decoded"); return; }
   prefix(a);
-  db::post(a);
-  if (!inject(b, &t)) { set(10, StResult::FAIL, "not seen in table (queue full?)"); return; }
+  if (!db::post(a)) { set(10, StResult::FAIL, "queue full"); return; }
+  if (!inject(b, &t)) {
+    db::remove(a.type, a.id);
+    set(10, StResult::FAIL, "not seen in table (queue full?)");
+    return;
+  }
   vTaskDelay(pdMS_TO_TICKS(100));
   db::get(t.type, t.id, &t);
+  char want[24];
+  snprintf(want, sizeof want, "TEST-%s", kVecSerialBle);
   bool ok = t.odid.has_basic && t.odid.loc_valid && near(t.odid.lat, kVecBleLat) &&
-            strcmp(t.id, "TEST-1596F0SELFTEST02") == 0;
+            near(t.odid.lon, kVecBleLon) && strcmp(t.id, want) == 0;
   if (ok) set(10, StResult::PASS, "two adverts merged into one target");
   else set(10, StResult::FAIL, "adverts did not merge");
   db::remove(t.type, t.id);
@@ -118,22 +143,22 @@ void check_tello() {
   Target t;
   if (!obs_from_wifi(v.data, v.len, -55, 1, millis(), kAll, ids, o)) { set(11, StResult::FAIL, "SSID not matched"); return; }
   if (!inject(o, &t)) { set(11, StResult::FAIL, "not seen in table"); return; }
-  if (t.type == SourceType::DRONE_WIFI && strcmp(t.vendor, "Ryze/DJI Tello") == 0) set(11, StResult::PASS, "TELLO SSID -> Ryze/DJI Tello");
+  bool ok = t.type == SourceType::DRONE_WIFI && strcmp(t.vendor, "Ryze/DJI Tello") == 0;
+  if (ok) set(11, StResult::PASS, "TELLO SSID -> Ryze/DJI Tello");
   else set(11, StResult::FAIL, "wrong vendor");
-  g_t4 = t;
+  if (ok) { g_t4 = t; g_t4_ok = true; }
   db::remove(t.type, t.id);
 }
 
 void check_elrs() {
-  RcFingerprint fp;
+  g_fp = RcFingerprint();
   CadHit h[8];
   uint32_t now = millis();
   size_t n = vec_elrs_hits(h, 8, now - 700);
-  for (size_t i = 0; i < n; i++) fp.add_cad(h[i]);
-  Observation out[4];
+  for (size_t i = 0; i < n; i++) g_fp.add_cad(h[i]);
   Target t;
-  if (fp.evaluate(now, out, 4) != 1) { set(12, StResult::FAIL, "hop pattern not classified"); return; }
-  if (!inject(out[0], &t)) { set(12, StResult::FAIL, "not seen in table"); return; }
+  if (g_fp.evaluate(now, g_fp_out, 4) != 1) { set(12, StResult::FAIL, "hop pattern not classified"); return; }
+  if (!inject(g_fp_out[0], &t)) { set(12, StResult::FAIL, "not seen in table"); return; }
   if (strcmp(t.id, "TEST-ELRS900-SF7") == 0 && t.lora.rate_hz == 100) set(12, StResult::PASS, "ELRS900-SF7 ~100Hz");
   else set(12, StResult::FAIL, "wrong class/rate");
   db::remove(t.type, t.id);
@@ -149,13 +174,15 @@ void check_lora(size_t item, void (*vec)(Vec&), PlanKind kind, uint32_t f, uint8
   if (!inject(o, &t)) { set(item, StResult::FAIL, "not seen in table"); return; }
   char expect[24];
   snprintf(expect, sizeof expect, "TEST-%s", want);
-  if (strcmp(t.id, expect) == 0) set(item, StResult::PASS, "%s", want);
+  bool ok = strcmp(t.id, expect) == 0;
+  if (ok) set(item, StResult::PASS, "%s", want);
   else set(item, StResult::FAIL, "got %s", t.id);
-  if (item == 13) g_t6 = t;
+  if (item == 13 && ok) { g_t6 = t; g_t6_ok = true; }
   db::remove(t.type, t.id);
 }
 
 void check_alerts() {
+  if (!g_t1_ok || !g_t4_ok || !g_t6_ok) { set(15, StResult::FAIL, "depends on P1/P4/P6"); return; }
   AlertLevel a = alert_for(g_t1, 2), b = alert_for(g_t4, 2), c = alert_for(g_t6, 2);
   if (a == AlertLevel::ALARM && b == AlertLevel::NOTICE && c == AlertLevel::NONE)
     set(15, StResult::PASS, "drone ALARM, wifi NOTICE, mesh none");
@@ -164,6 +191,7 @@ void check_alerts() {
 }
 
 void check_csv() {
+  if (!g_t1_ok) { set(16, StResult::FAIL, "depends on P1"); return; }
   char row[320];
   size_t n = csv_row(g_o1, "", row, sizeof row);
   if (n && strstr(row, kVecSerialWifi) && strstr(row, "35.7796000")) set(16, StResult::PASS, "row has serial + 7-dp lat");
@@ -188,6 +216,7 @@ void run(void*) {
   lora_scanner::Stats s0 = lora_scanner::stats();
   uint32_t frames0 = wifi_sniffer::frames(), adverts0 = ble_scanner::adverts();
   Serial.println("SELFTEST,START");
+  g_t1_ok = g_t4_ok = g_t6_ok = false;
 
   g_progress = "Hardware";
   if (!g_boot.display || !g_boot.lora) set(0, StResult::FAIL, "display %s, LoRa %s", g_boot.display ? "ok" : "FAIL", g_boot.lora ? "ok" : "FAIL");
@@ -239,13 +268,15 @@ void run(void*) {
   else if (errs * 20 >= ops) set(5, StResult::WARN, "%lu errors / %lu ops", (unsigned long)errs, (unsigned long)ops);
   else set(5, StResult::PASS, "%lu errors / %lu ops", (unsigned long)errs, (unsigned long)ops);
 
+  remove_all_test_targets();
   int pass = 0, warn = 0, fail = 0;
   for (const StItem& it : g_items) {
     if (it.r == StResult::PASS) pass++;
     else if (it.r == StResult::WARN) warn++;
     else if (it.r == StResult::FAIL) fail++;
   }
-  Serial.printf("SELFTEST,SUMMARY,pass=%d,warn=%d,fail=%d\n", pass, warn, fail);
+  Serial.printf("SELFTEST,SUMMARY,pass=%d,warn=%d,fail=%d,stack_free=%u\n", pass, warn, fail,
+                (unsigned)uxTaskGetStackHighWaterMark(nullptr));
   g_progress = "done";
   g_running = false;
   vTaskDelete(nullptr);
@@ -259,7 +290,10 @@ bool start() {
   g_running = true;
   for (StItem& it : g_items) { it.r = StResult::PENDING; it.detail[0] = '\0'; }
   g_progress = "starting";
-  xTaskCreatePinnedToCore(run, "selftest", 8192, nullptr, 1, nullptr, 0);
+  if (xTaskCreatePinnedToCore(run, "selftest", 16384, nullptr, 1, nullptr, 0) != pdPASS) {
+    g_running = false;
+    return false;
+  }
   return true;
 }
 bool running() { return g_running; }
