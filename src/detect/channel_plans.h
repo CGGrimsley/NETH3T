@@ -25,3 +25,5 @@ constexpr size_t kMaxPlans = 12;
 size_t build_plans(Region r, ScanPlan* out, size_t max);  // returns count
 uint32_t meshtastic_freq_khz(Region r, const char* preset_name, uint32_t bw_hz);
 uint16_t elrs_rate_hz(bool band24, uint8_t sf);  // 0 if unknown
+// RSSI sweep from f0 to f1 (both included): step >= min_step, at most 80 points.
+ScanPlan make_sweep_plan(const char* name, uint32_t f0_khz, uint32_t f1_khz, uint32_t min_step_khz, bool hf);

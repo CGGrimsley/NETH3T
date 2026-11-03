@@ -111,6 +111,20 @@ static void test_build_plans_respects_max() {
   TEST_ASSERT_EQUAL(3, build_plans(Region::FCC, plans, 3));
 }
 
+static void test_make_sweep_plan_points() {
+  ScanPlan p = make_sweep_plan("Z", 913000, 917000, 50, false);
+  TEST_ASSERT_EQUAL(80, p.n_freqs);
+  TEST_ASSERT_EQUAL_UINT32(913000, p.freqs_khz[0]);
+  TEST_ASSERT_EQUAL_UINT32(917000, p.freqs_khz[79]);
+  TEST_ASSERT_EQUAL((int)PlanMode::RSSI_SWEEP, (int)p.mode);
+  ScanPlan q = make_sweep_plan("Z", 915000, 915500, 50, false);  // narrower than 80 steps
+  TEST_ASSERT_EQUAL(11, q.n_freqs);
+  TEST_ASSERT_EQUAL_UINT32(915500, q.freqs_khz[10]);
+  ScanPlan h = make_sweep_plan("H", 2400000, 2416000, 200, true);
+  TEST_ASSERT_TRUE(h.hf);
+  TEST_ASSERT_EQUAL(80, h.n_freqs);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_meshtastic_longfast_us_906875);
@@ -124,5 +138,6 @@ int main() {
   RUN_TEST(test_region_switch_rebuilds_plans);
   RUN_TEST(test_sweep_respects_80_point_cap);
   RUN_TEST(test_build_plans_respects_max);
+  RUN_TEST(test_make_sweep_plan_points);
   return UNITY_END();
 }

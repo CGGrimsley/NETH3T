@@ -54,6 +54,10 @@ const MeshPreset kMesh[] = {
 };
 }  // namespace
 
+ScanPlan make_sweep_plan(const char* name, uint32_t f0, uint32_t f1, uint32_t min_step, bool hf) {
+  return sweep(name, f0, f1, min_step, hf);
+}
+
 uint32_t meshtastic_freq_khz(Region r, const char* preset_name, uint32_t bw_hz) {
   uint64_t start = r == Region::FCC ? 902000000ULL : 869400000ULL;
   uint64_t end = r == Region::FCC ? 928000000ULL : 869650000ULL;
