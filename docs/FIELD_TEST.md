@@ -93,3 +93,23 @@ Startup shows the Brushbeater logo and "NETH3T" for about 2 s with the boot resu
 | Tap each bottom tab | Switches between Targets, Spectrum and Settings; the current tab is highlighted |
 | Open Hunt on any target, then press the Home key (printed circle under the screen) | Returns to Targets; the radios stop focusing on that target |
 | On Hunt, tap **Back** (top-right) | Returns to Targets |
+
+## 9. Self-test
+
+| Step | Expected |
+|---|---|
+| Settings → **Run self-test** (or serial `selftest`) | Self-test screen; checks fill in over about 12 s; one chirp and one double buzz (M1 shows CHECK) |
+| Results indoors near Wi-Fi and phones | P1–P9 PASS; H4–H8 PASS (H2 WARN without an SD card); summary has 0 FAIL |
+| Serial | `SELFTEST,…` line per check and `SELFTEST,SUMMARY,…` |
+| Targets list afterwards | No `TEST-` rows left; no alert banner fired during the test; no `TEST-` rows in the SD log |
+
+## 10. Spectrum analyzer
+
+| Step | Expected |
+|---|---|
+| Tap the **Spectrum** tab | Screen turns landscape. If the picture is upside down, set `kSpectrumRotation` to 3 in `src/ui/ui_internal.h` and reflash |
+| Press a 433.92 MHz key fob with **Band** on 433 | A spike on the amber trace; the red peak line holds it and decays slowly |
+| Tap the trace | Green marker with `MHz / dBm / peak` readout at that point |
+| `+` several times | Span halves each time down to 4 MHz, centred on the marker; frequency labels show 3 decimals |
+| `−` | Span widens back to the full band |
+| **Back**, the Home key, BOOT, or tapping an alert banner | Returns to Targets; serial `stats` shows normal plans resuming (no `SPECTRUM` plan) |

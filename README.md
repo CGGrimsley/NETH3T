@@ -79,10 +79,25 @@ pio device monitor -b 115200
   - peak hold and a 30 s history graph;
   - beeps and vibration that speed up as you get closer;
   - for Remote ID: drone and pilot coordinates.
-- **Spectrum**: waterfall of the 915/868, 433 and 2.4 GHz sweeps, with
-  activity hits marked by spreading factor.
+- **Spectrum** (turns to landscape): a live spectrum analyzer.
+  - Live trace in amber, slowly decaying peak hold in red, noise floor in blue.
+  - Activity hits marked by spreading factor, and a waterfall underneath.
+  - **Tap** the trace to place a marker with a frequency/level readout.
+  - **`+` / `−`** (or the up/down buttons) zoom around the marker, down to
+    4 MHz wide (16 MHz at 2.4 GHz).
+  - **Band** (or long-press down) switches 915/868 → 433 → 2.4 GHz.
 - **Settings**: region (FCC/EU), each detector on/off, alerts, sound,
   vibration, volume, brightness, SD logging, and About/debug counters.
+- **Self-test** (Settings → *Run self-test*, or serial `selftest`): a
+  receive-only check of the whole device in about 12 s.
+  - Radios: the LoRa radio's sweeps, activity checks and error rate; Wi-Fi
+    and BLE reception.
+  - Detectors: built-in test frames for every detector go through the real
+    decoding code into the target list, the alert policy and the CSV formatter.
+  - A chirp and a buzz for you to confirm by ear and feel.
+  - Results show as a pass/warn/fail list (also printed to serial as
+    `SELFTEST,…` lines). Test targets are prefixed `TEST-`, never alert or get
+    logged, and are removed afterwards.
 
 **Hunting tip:** the antenna picks up equally in all directions. Hold the
 device against your chest and turn slowly. Your body blocks signals from
@@ -123,6 +138,7 @@ Serial commands (115200 baud, newline-terminated):
 | `dump` | Print the target table |
 | `stats` | Radio counters, dropped observations, restarts, free memory |
 | `sweep` | Latest raw RSSI sweep of each band, with its noise floor |
+| `selftest` | Run the self-test; results print as `SELFTEST,<id>,<result>,<detail>` |
 
 ## Development
 
