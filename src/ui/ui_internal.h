@@ -62,7 +62,11 @@ namespace ui_hunt {
 void draw(Arduino_Canvas* c, const Target& t, uint32_t now);
 void input(const Input& in, const Target& t);
 }
+// Spectrum draws in landscape; the router rotates canvas and touch for it.
+constexpr uint8_t kSpectrumRotation = 1;  // flip to 3 if the picture is upside down
 namespace ui_spectrum {
+void enter();   // sets the scanner focus for the viewed range
+void leave();   // clears the scanner focus; called on every exit
 void draw(Arduino_Canvas* c);
 void input(const Input& in);
 }

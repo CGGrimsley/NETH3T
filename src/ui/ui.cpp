@@ -14,6 +14,7 @@
 #include "settings/settings.h"
 #include "ui/display.h"
 #include "ui/geo.h"
+#include "ui/spectrum_view.h"
 #include "ui/touch.h"
 #include "ui/ui_internal.h"
 
@@ -78,7 +79,7 @@ const Screen kTabs[3] = {Screen::TARGETS, Screen::SPECTRUM, Screen::SETTINGS};
 const char* const kTabNames[3] = {"Targets", "Spectrum", "Settings"};
 
 bool has_tabs() {
-  return g_screen == Screen::TARGETS || g_screen == Screen::SPECTRUM || g_screen == Screen::SETTINGS;
+  return g_screen == Screen::TARGETS || g_screen == Screen::SETTINGS;  // Spectrum is landscape, no tabs
 }
 
 void draw_tabs(Arduino_Canvas* c) {
@@ -117,7 +118,7 @@ void draw_banner(Arduino_Canvas* c, uint32_t now) {
   b = g_banner;
   xSemaphoreGive(g_banner_mx);
   if (!b.on) return;
-  c->fillRect(0, kStatusH, TFT_W, 40, b.red ? kRed : kAmber);
+  c->fillRect(0, kStatusH, c->width(), 40, b.red ? kRed : kAmber);
   c->setTextColor(BLACK);
   c->setTextSize(1);
   c->setCursor(6, kStatusH + 6);
@@ -201,6 +202,13 @@ void ui_task(void*) {
     }
     size_t n = g_n;
     Input in = read_input();
+    bool landscape = g_screen == Screen::SPECTRUM;
+    if (landscape && in.tap) {
+      int16_t lx, ly;
+      touch_to_landscape(in.x, in.y, kSpectrumRotation, &lx, &ly);
+      in.x = lx;
+      in.y = ly;
+    }
     bool consumed = handle_nav(in) || banner_tap(in);
     run_alerts(now);
     bool hunting = false;
@@ -218,7 +226,12 @@ void ui_task(void*) {
         break;
       case Screen::SPECTRUM:
         if (!consumed) ui_spectrum::input(in);
-        ui_spectrum::draw(c);
+        if (g_screen == Screen::SPECTRUM) {
+          c->setRotation(kSpectrumRotation);
+          ui_spectrum::draw(c);
+          draw_banner(c, now);
+          c->setRotation(0);
+        }
         break;
       case Screen::SETTINGS:
         if (!consumed) ui_settings::input(in);
@@ -231,8 +244,15 @@ void ui_task(void*) {
     }
     run_hunt_feedback(hunting ? &locked : nullptr, now);
     if (has_tabs()) draw_tabs(c);
-    draw_status(c);
-    draw_banner(c, now);
+    if (g_screen != Screen::SPECTRUM) {
+      draw_status(c);
+      draw_banner(c, now);
+    }
+    // Single place for Spectrum enter/leave, so every exit route clears the focus.
+    static Screen prev = Screen::TARGETS;
+    if (prev != Screen::SPECTRUM && g_screen == Screen::SPECTRUM) ui_spectrum::enter();
+    if (prev == Screen::SPECTRUM && g_screen != Screen::SPECTRUM) ui_spectrum::leave();
+    prev = g_screen;
     display::flush();
     health::check();
     vTaskDelay(pdMS_TO_TICKS(50));
