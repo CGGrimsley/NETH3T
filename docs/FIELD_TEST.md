@@ -30,3 +30,15 @@ Run these on the real device after flashing. Open the serial monitor
 | Meshtastic node on the default LongFast channel sending a message | `MESHTASTIC` target `!xxxxxxxx` matching the node ID |
 | LoRaWAN device (or near a busy gateway) | `LORAWAN` target `DA:xxxxxxxx` |
 | Serial `stats` | `cad_hits` and `rx_pkts` counters rising while the above run |
+
+## 4. Targets list and Hunt
+
+| Step | Expected |
+|---|---|
+| With the phone Remote ID app running | Targets list shows a red `D` row with the serial; rows sorted decoded-first |
+| Tap the row (or select it and long-press top-right) | Hunt screen opens: big dBm number, meter, trend arrow, 30 s graph |
+| Walk ~20 m away | Arrow turns blue (colder) within about 3 s; number falls |
+| Walk back | Arrow turns green (warmer); peak line holds the best value |
+| Tap RESET PEAK | Peak line drops to the current reading |
+| Detail panel | Shows the app's drone and pilot coordinates; "no fix" when the app sends 0,0 |
+| BOOT button | Returns to Targets and releases the radio lock |

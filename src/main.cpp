@@ -12,6 +12,7 @@
 #include "ui/buttons.h"
 #include "ui/display.h"
 #include "ui/touch.h"
+#include "ui/ui.h"
 
 BootStatus g_boot = {};
 
@@ -61,18 +62,9 @@ void setup() {
   boot_step("LORA", g_boot.lora);
   db::start();
   lora_scanner::start();
+  ui::start();
   wifi_sniffer::start();
   ble_scanner::start();
 }
 
-void loop() {
-  // Bring-up check: draw touch dots, print button events (replaced by the UI task).
-  int16_t x, y;
-  if (touch::read(x, y) && display::canvas()) {
-    display::canvas()->fillCircle(x, y, 4, YELLOW);
-    display::flush();
-  }
-  Btn b = buttons::poll();
-  if (b != Btn::NONE) Serial.printf("BTN %d\n", (int)b);
-  delay(10);
-}
+void loop() { vTaskDelay(pdMS_TO_TICKS(1000)); }
