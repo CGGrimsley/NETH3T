@@ -148,6 +148,7 @@ void run_alerts(uint32_t now) {
   const Settings& s = settings::get();
   bool chirp = false, dbl = false, single = false;
   for (size_t i = 0; i < g_n; i++) {
+    if (is_test_id(g_snap[i].id)) continue;  // self-test targets never alert
     AlertLevel lv = alert_for(g_snap[i], s.alert_mode);
     if (lv == AlertLevel::NONE) continue;
     db::mark_alerted(g_snap[i].type, g_snap[i].id);

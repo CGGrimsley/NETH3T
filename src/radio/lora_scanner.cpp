@@ -38,6 +38,8 @@ NoiseFloor g_nf[3];
 lora_scanner::Stats g_stats = {};
 
 struct LockState { bool on; uint32_t f; uint8_t sf; uint32_t bw; bool fhss; } g_lock = {};
+struct Focus { bool on; uint8_t band; uint32_t f0, f1; } g_focus = {};
+constexpr size_t kFocusSlot = kMaxPlans - 1;  // plan slot reserved for the focus sweep
 volatile bool g_region_dirty = true;
 volatile Region g_region = Region::FCC;
 ScanPlan g_plans[kMaxPlans];
@@ -129,6 +131,7 @@ void run_sweep(size_t pi) {
     if (g_nf[b].hot(row.dbm[i])) g_fp.add_hot({p.freqs_khz[i], now, row.dbm[i]});
   g_rows[b] = row;
   g_row_valid[b] = true;
+  g_stats.sweeps++;
 }
 
 // ExpressLRS derives invert-IQ from the binding UID, so callers alternate `iq`.
@@ -153,6 +156,7 @@ void run_cad(size_t pi, uint8_t sf, const uint32_t* freqs, uint8_t n, bool iq) {
         if (!done) { g_radio->standby(); ok(RADIOLIB_ERR_RX_TIMEOUT, pi); continue; }
         res = g_radio->getChannelScanResult();
       }
+      { Mx m; g_stats.cad_runs++; }
       if (res == RADIOLIB_LORA_DETECTED) {
         float r;
         {
@@ -293,11 +297,17 @@ void scanner_task(void*) {
       for (bool& v : g_row_valid) v = false;
     }
     LockState L;
-    { Mx m; L = g_lock; }
+    Focus F;
+    { Mx m; L = g_lock; F = g_focus; }
     const Settings& s = settings::get();
     visit++;
     if (L.on) {
       run_locked(L, visit);
+    } else if (F.on && (visit & 1) && g_np < kFocusSlot) {
+      // Spectrum screen open: re-sweep the viewed range every other visit.
+      bool hf = F.band == 2;
+      g_plans[kFocusSlot] = make_sweep_plan("SPECTRUM", F.f0, F.f1, hf ? 200 : 50, hf);
+      run_plan_visit(kFocusSlot, visit);
     } else {
       switch (visit % 7) {
         case 0: run_plan_visit(find_plan(PlanKind::SWEEP, false, 0), visit); break;
@@ -391,4 +401,15 @@ size_t recent_cad(CadHit* out, size_t max) {
 
 const char* current_plan() { return g_ok ? g_current : "LORA OFF"; }
 const char* version() { return g_version; }
+bool ok() { return g_ok; }
+void set_focus(uint8_t band, uint32_t f0, uint32_t f1) {
+  if (!g_mx || f1 <= f0) return;
+  Mx m;
+  g_focus = {true, band, f0, f1};
+}
+void clear_focus() {
+  if (!g_mx) return;
+  Mx m;
+  g_focus.on = false;
+}
 }  // namespace lora_scanner

@@ -19,11 +19,13 @@ struct Frame {
 QueueHandle_t g_q = nullptr;
 volatile uint8_t g_pinned = 0;
 volatile uint8_t g_ch = 1;
+volatile uint32_t g_frames = 0;
 IdCache g_ids;
 const uint8_t kHop[] = {1, 6, 11, 2, 7, 12, 3, 8, 13, 4, 9, 5, 10};
 
 void on_pkt(void* buf, wifi_promiscuous_pkt_type_t type) {
   if (type != WIFI_PKT_MGMT || !g_q) return;
+  g_frames++;
   const wifi_promiscuous_pkt_t* p = (const wifi_promiscuous_pkt_t*)buf;
   uint8_t fc0 = p->payload[0];
   if (fc0 != 0x80 && fc0 != 0x50 && fc0 != 0xD0) return;  // beacon, probe resp, action
@@ -80,4 +82,5 @@ void start() {
 }
 void pin_channel(uint8_t ch) { g_pinned = ch <= 13 ? ch : 0; }
 uint8_t channel() { return g_ch; }
+uint32_t frames() { return g_frames; }
 }  // namespace wifi_sniffer

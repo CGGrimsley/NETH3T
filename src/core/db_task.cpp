@@ -68,5 +68,9 @@ void mark_alerted(SourceType t, const char* id) {
   Target* p = g_db->find(t, id);
   if (p) p->alerted = true;
 }
+bool remove(SourceType t, const char* id) {
+  Lock l;
+  return g_db->remove(t, id);
+}
 void set_sink(Sink s) { g_sink = s; }
 }  // namespace db

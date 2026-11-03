@@ -9,10 +9,12 @@
 namespace {
 IdCache g_ids;
 NimBLEScan* g_scan = nullptr;
+volatile uint32_t g_adverts = 0;
 constexpr uint16_t kIntervalMs = 1000, kWindowMs = 300;
 
 class Callbacks : public NimBLEScanCallbacks {
   void onResult(const NimBLEAdvertisedDevice* d) override {
+    g_adverts++;
     const Settings& s = settings::get();
     DetectFlags fl = {s.en_rid_wifi, s.en_rid_ble, s.en_drone_wifi};
     const std::vector<uint8_t>& p = d->getPayload();
@@ -41,6 +43,7 @@ void start() {
   g_scan->setWindow(kWindowMs);
   g_scan->start(0, false, true);  // duration 0 = scan forever
 }
+uint32_t adverts() { return g_adverts; }
 void set_continuous(bool on) {
   if (!g_scan) return;
   g_scan->stop();

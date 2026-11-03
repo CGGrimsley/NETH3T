@@ -169,6 +169,17 @@ void TargetDb::reset_peak(SourceType t, const char* id) {
   if (p) p->peak_rssi = p->last_rssi;
 }
 
+bool TargetDb::remove(SourceType t, const char* id) {
+  int i = find_index(t, id);
+  if (i < 0) return false;
+  if (i == locked_) locked_ = -1;
+  used_[i] = false;
+  count_--;
+  return true;
+}
+
+bool is_test_id(const char* id) { return id && strncmp(id, "TEST-", 5) == 0; }
+
 Trend trend_of(const Target& t, uint32_t now_ms) {
   if (t.hist_len == 0) return Trend::STEADY;
   // Walk newest → oldest; reference = newest sample at least the window old, else oldest.

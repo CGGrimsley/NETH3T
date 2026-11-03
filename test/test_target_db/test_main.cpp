@@ -203,6 +203,35 @@ static void test_basic_id_serial_not_overwritten_by_caa_id() {
   TEST_ASSERT_EQUAL_STRING("SERIAL123", db->find(SourceType::REMOTEID_BLE, "SN1")->odid.uas_id);
 }
 
+static void test_remove_target() {
+  db->ingest(obs(SourceType::ELRS, "TEST-A", -70, 0));
+  db->ingest(obs(SourceType::ELRS, "B", -70, 0));
+  TEST_ASSERT_TRUE(db->remove(SourceType::ELRS, "TEST-A"));
+  TEST_ASSERT_NULL(db->find(SourceType::ELRS, "TEST-A"));
+  TEST_ASSERT_EQUAL(1, db->size());
+  TEST_ASSERT_FALSE(db->remove(SourceType::ELRS, "TEST-A"));
+}
+static void test_remove_keeps_lock_of_other_target() {
+  db->ingest(obs(SourceType::ELRS, "TEST-A", -70, 0));
+  db->ingest(obs(SourceType::ELRS, "B", -70, 0));
+  db->lock(SourceType::ELRS, "B");
+  db->remove(SourceType::ELRS, "TEST-A");
+  TEST_ASSERT_NOT_NULL(db->locked());
+  TEST_ASSERT_EQUAL_STRING("B", db->locked()->id);
+}
+static void test_remove_locked_unlocks() {
+  db->ingest(obs(SourceType::ELRS, "TEST-A", -70, 0));
+  db->lock(SourceType::ELRS, "TEST-A");
+  db->remove(SourceType::ELRS, "TEST-A");
+  TEST_ASSERT_NULL(db->locked());
+}
+static void test_is_test_id() {
+  TEST_ASSERT_TRUE(is_test_id("TEST-!5e1f7e57"));
+  TEST_ASSERT_FALSE(is_test_id("!5e1f7e57"));
+  TEST_ASSERT_FALSE(is_test_id("TEST"));
+  TEST_ASSERT_FALSE(is_test_id(nullptr));
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_merge_same_type_and_id);
@@ -223,5 +252,9 @@ int main() {
   RUN_TEST(test_full_table_keeps_drone_over_lora_nodes);
   RUN_TEST(test_full_table_of_drones_drops_heuristic_newcomer);
   RUN_TEST(test_basic_id_serial_not_overwritten_by_caa_id);
+  RUN_TEST(test_remove_target);
+  RUN_TEST(test_remove_keeps_lock_of_other_target);
+  RUN_TEST(test_remove_locked_unlocks);
+  RUN_TEST(test_is_test_id);
   return UNITY_END();
 }

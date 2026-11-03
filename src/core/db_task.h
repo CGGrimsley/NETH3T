@@ -14,6 +14,7 @@ bool locked(Target* out);                 // copies the locked target, false if 
 void reset_peak();                        // on the locked target
 uint32_t dropped();
 void mark_alerted(SourceType t, const char* id);
+bool remove(SourceType t, const char* id);
 using Sink = void (*)(const Observation&);
 void set_sink(Sink s);                    // called for every ingested observation (logger)
 }  // namespace db

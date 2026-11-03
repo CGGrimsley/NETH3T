@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include "board_pins.h"
 #include "core/spi_bus.h"
+#include "core/target_db.h"
 #include "log/csv_format.h"
 #include "log/serial_cmd.h"
 #include "settings/settings.h"
@@ -89,6 +90,7 @@ bool init() {
 }
 
 void write(const Observation& o) {
+  if (is_test_id(o.id)) return;  // self-test targets are never logged
   if (g_q) xQueueSend(g_q, &o, 0);
 }
 

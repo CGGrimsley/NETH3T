@@ -33,6 +33,7 @@ class TargetDb {
   void unlock();
   const Target* locked() const;
   void reset_peak(SourceType t, const char* id);
+  bool remove(SourceType t, const char* id);  // unlocks if it was the locked target
   size_t size() const { return count_; }
 
  private:
@@ -45,3 +46,5 @@ class TargetDb {
 };
 
 Trend trend_of(const Target& t, uint32_t now_ms);
+// Self-test targets carry this id prefix; they never alert or get logged.
+bool is_test_id(const char* id);
