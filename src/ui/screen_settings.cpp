@@ -19,7 +19,7 @@ const char* const kLabels[kItems] = {
     "Meshtastic", "LoRaWAN",       "Show LoRa",    "SD log",     "Sound",    "Vibration",
     "Alerts",     "Volume",        "Brightness",
 };
-constexpr int kRowH = 24, kListY = kStatusH + 30, kAboutRows = 6;
+constexpr int kRowH = 24, kListY = kStatusH + 40, kAboutRows = 6;
 constexpr int kVisible = (TFT_H - kListY - kAboutRows * 12 - 8) / kRowH;
 int g_sel = 0, g_top = 0;
 
@@ -88,6 +88,7 @@ void draw(Arduino_Canvas* c) {
   c->setTextColor(kText);
   c->setCursor(6, kStatusH + 6);
   c->print("Settings");
+  draw_back(c);
   for (int r = 0; r < kVisible && g_top + r < kItems; r++) {
     uint8_t i = (uint8_t)(g_top + r);
     int y = kListY + r * kRowH;
@@ -115,7 +116,7 @@ void draw(Arduino_Canvas* c) {
 }
 
 void input(const Input& in) {
-  if (in.btn == Btn::BACK) { ui::go(Screen::TARGETS); return; }
+  if (back_pressed(in)) { ui::go(Screen::TARGETS); return; }
   if (in.btn == Btn::UP) g_sel--;
   if (in.btn == Btn::DOWN) g_sel++;
   clamp();

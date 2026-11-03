@@ -93,7 +93,7 @@ behind you, so the reading is strongest when you face the transmitter.
 | BOOT (bottom-left) | Back / leave Hunt | — |
 | Top-right | Up | Lock selected target (Hunt) / change setting |
 | Bottom-right | Down | Settings |
-| Touch | Tap a row to hunt it; tap the alert banner; swipe left for Spectrum, right to go back | |
+| Touch | Tap a row to hunt it; tap the alert banner; swipe left for Spectrum; **Back** (top-right) or any swipe leaves Hunt / Spectrum / Settings | |
 
 **Alerts**
 
@@ -121,6 +121,7 @@ Serial commands (115200 baud, newline-terminated):
 | `region fcc` / `region eu` | Switch channel plans |
 | `dump` | Print the target table |
 | `stats` | Radio counters, dropped observations, restarts, free memory |
+| `sweep` | Latest raw RSSI sweep of each band, with its noise floor |
 
 ## Development
 

@@ -29,6 +29,21 @@ constexpr uint16_t kBlue = rgb(0x3E, 0x63, 0xDD);
 
 constexpr int kStatusH = 24;
 
+// Touch "Back" button, top-right under the status bar, on every non-home screen.
+constexpr int kBackX = TFT_W - 62, kBackY = kStatusH + 2, kBackW = 58, kBackH = 30;
+inline void draw_back(Arduino_Canvas* c) {
+  c->fillRoundRect(kBackX, kBackY, kBackW, kBackH, 6, ui_color::kPanel);
+  c->drawRoundRect(kBackX, kBackY, kBackW, kBackH, 6, ui_color::kGrey);
+  c->setTextSize(2);
+  c->setTextColor(ui_color::kText);
+  c->setCursor(kBackX + 6, kBackY + 8);
+  c->print("Back");
+}
+inline bool back_pressed(const Input& in) {
+  if (in.btn == Btn::BACK || in.swipe != 0) return true;  // BOOT button or any swipe
+  return in.tap && in.x >= kBackX - 6 && in.y < kBackY + kBackH + 6;
+}
+
 uint16_t target_color(const Target& t);  // by type/confidence
 char target_icon(const Target& t);       // D/R/L/W
 void format_freq(const Target& t, char* out, size_t cap);

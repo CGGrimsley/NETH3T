@@ -62,7 +62,8 @@ void draw(Arduino_Canvas* c) {
   c->setTextSize(2);
   c->setTextColor(kText);
   c->setCursor(6, kStatusH + 8);
-  c->printf("Spectrum %s", band_name(g_band));
+  c->printf("%s", band_name(g_band));
+  draw_back(c);
   if (w.len == 0) {
     c->setTextSize(1);
     c->setTextColor(kGrey);
@@ -107,7 +108,7 @@ void draw(Arduino_Canvas* c) {
 }
 
 void input(const Input& in) {
-  if (in.btn == Btn::BACK || in.swipe == 1) { ui::go(Screen::TARGETS); return; }
+  if (back_pressed(in)) { ui::go(Screen::TARGETS); return; }
   if (in.btn == Btn::UP) g_band = (uint8_t)((g_band + 2) % 3);
   if (in.btn == Btn::DOWN || in.tap) g_band = (uint8_t)((g_band + 1) % 3);
 }

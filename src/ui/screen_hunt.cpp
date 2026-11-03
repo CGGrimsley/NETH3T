@@ -46,13 +46,21 @@ void draw(Arduino_Canvas* c, const Target& t, uint32_t now) {
   c->setTextSize(2);
   c->setTextColor(col);
   c->setCursor(6, kStatusH + 6);
-  c->printf("%.17s", t.label[0] ? t.label : t.id);
+  c->printf("%.12s", t.label[0] ? t.label : t.id);
+  draw_back(c);
   char f[20];
   format_freq(t, f, sizeof f);
   c->setTextSize(1);
   c->setTextColor(kGrey);
   c->setCursor(6, kStatusH + 28);
-  c->printf("%s  hits %lu  %lus ago", f, (unsigned long)t.hits, (unsigned long)((now - t.last_ms) / 1000));
+  uint32_t silent_s = (now - t.last_ms) / 1000;
+  c->printf("%s  hits %lu  %lus ago", f, (unsigned long)t.hits, (unsigned long)silent_s);
+  if (silent_s >= 5) {  // nothing new heard: the meter is showing the last value
+    c->fillRect(0, kStatusH + 40, TFT_W, 22, kAmber);
+    c->setTextColor(BLACK);
+    c->setCursor(6, kStatusH + 47);
+    c->printf("No signal for %lus - meter frozen", (unsigned long)silent_s);
+  }
 
   // Meter + peak line
   c->drawRect(kMeterX, kMeterY, kMeterW, kMeterH, kDim);
@@ -135,7 +143,7 @@ void draw(Arduino_Canvas* c, const Target& t, uint32_t now) {
 }
 
 void input(const Input& in, const Target&) {
-  if (in.btn == Btn::BACK || in.btn == Btn::UP_LONG || in.swipe == 1) {
+  if (back_pressed(in) || in.btn == Btn::UP_LONG) {
     ui::unlock_target();
     ui::go(Screen::TARGETS);
     return;

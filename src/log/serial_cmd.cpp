@@ -70,6 +70,18 @@ void cmd_stats() {
                 (unsigned long)ESP.getFreeHeap(), (unsigned long)ESP.getFreePsram(), lora_scanner::current_plan());
 }
 
+void cmd_sweep() {
+  static const char* const kBands[3] = {"915/868", "433", "2400"};
+  for (uint8_t b = 0; b < 3; b++) {
+    lora_scanner::SweepRow r;
+    if (!lora_scanner::latest_sweep(b, r)) { Serial.printf("SWEEP %s none\n", kBands[b]); continue; }
+    Serial.printf("SWEEP %s f0=%lu step=%lu n=%u floor=%d age=%lums dbm=", kBands[b], (unsigned long)r.f0_khz,
+                  (unsigned long)r.step_khz, r.n, r.floor_dbm, (unsigned long)(millis() - r.t_ms));
+    for (uint8_t i = 0; i < r.n; i++) Serial.printf(i ? ",%d" : "%d", r.dbm[i]);
+    Serial.println();
+  }
+}
+
 void run(char* line) {
   char* arg = strchr(line, ' ');
   if (arg) { *arg++ = '\0'; while (*arg == ' ') arg++; } else { arg = line + strlen(line); }
@@ -77,7 +89,8 @@ void run(char* line) {
   else if (!strcmp(line, "region")) cmd_region(arg);
   else if (!strcmp(line, "dump")) cmd_dump();
   else if (!strcmp(line, "stats")) cmd_stats();
-  else if (line[0]) Serial.println("ERR commands: time <unix> | region fcc|eu | dump | stats");
+  else if (!strcmp(line, "sweep")) cmd_sweep();
+  else if (line[0]) Serial.println("ERR commands: time <unix> | region fcc|eu | dump | stats | sweep");
 }
 }  // namespace
 
