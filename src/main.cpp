@@ -5,6 +5,8 @@
 #include "core/db_task.h"
 #include "core/power.h"
 #include "core/spi_bus.h"
+#include "radio/ble_scanner.h"
+#include "radio/wifi_sniffer.h"
 #include "settings/settings.h"
 #include "ui/buttons.h"
 #include "ui/display.h"
@@ -55,6 +57,8 @@ void setup() {
   settings::load();
   display::set_brightness(settings::get().brightness);
   db::start();
+  wifi_sniffer::start();
+  ble_scanner::start();
 }
 
 void loop() {
