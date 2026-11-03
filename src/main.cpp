@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "board_pins.h"
+#include "alert/audio.h"
+#include "alert/vibe.h"
 #include "core/boot.h"
 #include "core/db_task.h"
 #include "core/power.h"
@@ -56,6 +58,8 @@ void setup() {
   g_boot.touch = touch::init();
   boot_step("TOUCH", g_boot.touch);
   buttons::init();
+  audio::init();
+  vibe::init();
   settings::load();
   display::set_brightness(settings::get().brightness);
   g_boot.lora = lora_scanner::init(&g_boot.lora_err);

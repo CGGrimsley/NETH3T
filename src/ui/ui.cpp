@@ -1,6 +1,9 @@
 #include "ui/ui.h"
 #include <Arduino.h>
 #include <cstring>
+#include "alert/alert_policy.h"
+#include "alert/audio.h"
+#include "alert/vibe.h"
 #include "core/boot.h"
 #include "core/db_task.h"
 #include "core/health.h"
@@ -10,6 +13,7 @@
 #include "radio/wifi_sniffer.h"
 #include "settings/settings.h"
 #include "ui/display.h"
+#include "ui/geo.h"
 #include "ui/touch.h"
 #include "ui/ui_internal.h"
 
@@ -103,6 +107,39 @@ bool banner_tap(const Input& in) {
   return true;
 }
 
+// Once per second: announce new targets (spec §6 Alerts).
+void run_alerts(uint32_t now) {
+  static uint32_t last = 0;
+  if (now - last < 1000) return;
+  last = now;
+  const Settings& s = settings::get();
+  bool chirp = false, dbl = false, single = false;
+  for (size_t i = 0; i < g_n; i++) {
+    AlertLevel lv = alert_for(g_snap[i], s.alert_mode);
+    if (lv == AlertLevel::NONE) continue;
+    db::mark_alerted(g_snap[i].type, g_snap[i].id);
+    ui::show_banner(g_snap[i], lv == AlertLevel::ALARM);
+    if (lv == AlertLevel::ALARM) { chirp = true; dbl = true; } else { single = true; }
+  }
+  if (s.alert_mode == 2) {
+    if (chirp && s.sound) audio::chirp();
+    if (dbl && s.vibe) vibe::double_pulse();
+    else if (single && s.vibe) vibe::pulse(60);
+  }
+}
+
+// Geiger-style feedback while hunting; silent when the target has gone quiet.
+void run_hunt_feedback(const Target* t, uint32_t now) {
+  const Settings& s = settings::get();
+  bool live = t && now - t->last_ms < 3000;
+  uint16_t pulse = live ? rssi_to_pulse_hz_x10(t->ema_rssi) : 0;
+  audio::set_volume(s.volume);
+  if (live && s.sound) audio::hunt_pulse(rssi_to_tone_hz(t->ema_rssi), pulse);
+  else audio::stop();
+  if (live && s.vibe) vibe::hunt_pulse(pulse);
+  else vibe::stop();
+}
+
 void ui_task(void*) {
   void* mem = heap_caps_malloc(sizeof(Target) * TargetDb::kCapacity, MALLOC_CAP_SPIRAM);
   g_snap = (Target*)(mem ? mem : malloc(sizeof(Target) * 32));
@@ -122,6 +159,8 @@ void ui_task(void*) {
     g_n = n;
     Input in = read_input();
     bool consumed = banner_tap(in);
+    run_alerts(now);
+    bool hunting = false;
 
     c->fillScreen(kBg);
     switch (g_screen) {
@@ -132,7 +171,7 @@ void ui_task(void*) {
       case Screen::HUNT:
         if (!db::locked(&locked)) { g_screen = Screen::TARGETS; break; }
         if (!consumed) ui_hunt::input(in, locked);
-        if (g_screen == Screen::HUNT) ui_hunt::draw(c, locked, now);
+        if (g_screen == Screen::HUNT) { ui_hunt::draw(c, locked, now); hunting = true; }
         break;
       case Screen::SPECTRUM:
         if (!consumed) ui_spectrum::input(in);
@@ -143,6 +182,7 @@ void ui_task(void*) {
         ui_settings::draw(c);
         break;
     }
+    run_hunt_feedback(hunting ? &locked : nullptr, now);
     draw_status(c);
     draw_banner(c, now);
     display::flush();

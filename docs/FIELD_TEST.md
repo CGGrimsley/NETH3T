@@ -52,3 +52,15 @@ Run these on the real device after flashing. Open the serial monitor
 | Long-press bottom-right → Settings; change Region to EU | Band 0 axis now reads 863.0 … 870.0; back to FCC reads 902.0 … 928.0 |
 | Toggle a few settings, power-cycle | Settings are unchanged after reboot |
 | About rows | LR11x0 version, CAD/RX counters, `restarts 0` |
+
+## 6. Alerts and hunt feedback
+
+| Step | Expected |
+|---|---|
+| Start the phone Remote ID transmitter (Settings → Alerts `full`) | One red banner, a two-tone chirp and a double vibration; no repeat while the target stays in the list |
+| Tap the banner | Hunt opens on that target |
+| Phone hotspot named `TELLO-TEST` | Amber "Possible drone" banner and one short vibration |
+| Meshtastic node appears | Listed only; no banner, no sound |
+| On Hunt, walk toward the transmitter | Beeps get faster and higher in pitch; vibration pulses speed up |
+| Settings → Sound off / Vibration off | Each feedback channel mutes independently |
+| Stop the transmitter while on Hunt | Beeps stop within ~3 s |
