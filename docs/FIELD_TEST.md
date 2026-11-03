@@ -1,15 +1,24 @@
 # NETH3T field test checklist
 
-Run these on the real device after flashing. Open the serial monitor
-(`pio device monitor`, 115200 baud) alongside.
+Run these on the real device after flashing, in order. Keep the serial monitor
+open alongside (`pio device monitor -b 115200`). Serial commands such as `dump`
+and `stats` are typed into that monitor.
+
+You need: an Android phone with the OpenDroneID "Transmitter" app, ideally an
+ELRS transmitter (lowest power), and optionally a Meshtastic node, a LoRaWAN
+device and a microSD card.
+
+Note: on the finished firmware the Targets screen replaces the bring-up
+touch/button test, so for step 1 check the boot screen and serial output
+(buttons and touch are exercised in steps 4–5).
 
 ## 1. Bring-up
 
 | Step | Expected |
 |---|---|
 | Power on | Boot screen lists `PMU OK`, `DISPLAY OK`, `TOUCH OK`; serial prints matching `BOOT … OK` lines |
-| Touch the screen | A yellow dot appears under your finger |
-| Press each button | Serial prints `BTN 1` (BOOT), `BTN 2` (top right), `BTN 3` (bottom right); hold top/bottom right 1 s → `BTN 4` / `BTN 5` |
+| Boot screen | Also lists `RTC`, `LORA` and `SD` (SD FAIL is expected with no card) |
+| After boot | Targets screen appears with the status bar (region, LoRa plan, SD, battery) |
 
 ## 2. Remote ID
 
