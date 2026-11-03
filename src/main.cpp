@@ -6,6 +6,7 @@
 #include "core/power.h"
 #include "core/spi_bus.h"
 #include "radio/ble_scanner.h"
+#include "radio/lora_scanner.h"
 #include "radio/wifi_sniffer.h"
 #include "settings/settings.h"
 #include "ui/buttons.h"
@@ -56,7 +57,10 @@ void setup() {
   buttons::init();
   settings::load();
   display::set_brightness(settings::get().brightness);
+  g_boot.lora = lora_scanner::init(&g_boot.lora_err);
+  boot_step("LORA", g_boot.lora);
   db::start();
+  lora_scanner::start();
   wifi_sniffer::start();
   ble_scanner::start();
 }
