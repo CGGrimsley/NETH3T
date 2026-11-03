@@ -1,161 +1,157 @@
 ![N3 Logo](https://i.imgur.com/xraBuH7.png)
 
-# **NETH3T Penetration Testing Device (WORK IN PROGRESS)**
-(Network Exploits and Testing Tool 3) 
+# NETH3T: handheld anti-drone and LoRa detector
 
-## **Project Overview**
-This project aims to create a **multifunctional, portable penetration testing device** inspired by the capabilities of the **Flipper Zero**, but with enhanced functionality. The device leverages the **DSTIKE D-duino 32 (ESP32-based)** microcontroller and integrates several RF, NFC/RFID, IR, and Wi-Fi testing capabilities. It allows users to perform **Wi-Fi deauthentication attacks**, **RF signal sniffing and jamming**, **NFC/RFID cloning**, and **IR signal replaying**, all while being compact, portable, and flexible.
+NETH3T turns a **LilyGO T-Display-S3-Pro with the MVSRLora back plate (LR1121)**
+into a pocket receiver that finds drones, RC control links and LoRa devices. It
+then guides you to the one you pick, using a live signal-strength meter, beeps
+and vibration.
 
-This device is built to be used in **wireless penetration testing, RF analysis**, and **physical security assessments**, providing a versatile tool for security researchers and hobbyists.
+It only listens. It never transmits against anything.
 
-## **Key Features**
-### **1. Wi-Fi Penetration Testing (via ESP32)**
-- **Network Scanning:** Detect nearby Wi-Fi networks.
-- **Deauthentication Attacks:** Disconnect devices from selected Wi-Fi networks.
-- **Packet Injection:** Inject custom packets into Wi-Fi networks for testing.
-- **Packet Sniffing:** Capture Wi-Fi packets for analysis.
+> **Legal notice.** NETH3T is a receive-only monitoring tool. Laws on radio
+> monitoring, on logging what you receive, and on using Remote ID data
+> (drone or pilot locations, operator IDs) differ from country to country.
+> Some countries restrict all three. Check your local law before you use it.
+> Never jam, spoof or otherwise interfere with aircraft or their control
+> links; in most places that is a serious crime and dangerous. This firmware
+> has no transmit path for any of those things.
 
-### **2. Bluetooth Penetration Testing (via ESP32)**
-- **Bluetooth Device Scanning:** Discover nearby Bluetooth and BLE devices.
-- **Bluetooth Attacks:** Conduct basic Bluetooth and BLE attacks such as fuzzing and packet injection.
+## What it detects
 
-### **3. Sub-GHz RF Testing (via CC1101)**
-- **Frequency Range:** Operates in the **Sub-GHz range** (433 MHz, 868 MHz, 915 MHz).
-- **Signal Sniffing:** Capture and decode signals from RF-based devices like key fobs and remote controls.
-- **Signal Jamming:** Disrupt RF communication in the Sub-GHz frequency range.
-- **Replay Attacks:** Capture and replay RF signals to interact with RF-based devices.
+| Source | How | Confidence |
+|---|---|---|
+| **Remote ID drones** (ASTM F3411 / EU ASD-STAN): DJI and most modern drones | Wi-Fi beacon and Wi-Fi NAN frames, BLE 4 legacy and BLE 5 Long Range adverts; decodes serial, drone position/altitude/speed, **pilot position**, operator ID | Decoded |
+| **ExpressLRS** 900 MHz and 2.4 GHz (LoRa modes) | Channel-activity detection on the ELRS channel plans; the hop pattern plus the spreading factor gives band and approximate packet rate | Fingerprint |
+| **Older DJI DroneID beacons** | DJI vendor element in Wi-Fi beacons | Fingerprint |
+| **Drone-maker Wi-Fi** (DJI, Parrot, Skydio, Tello, Autel, …) | MAC vendor prefixes (IEEE registry) and SSID patterns | Heuristic |
+| **Other frequency-hopping RC links** (Crossfire, R9, …) | Bursts hopping across the 868/915 band in the RSSI sweep | Heuristic |
+| **Meshtastic** nodes | LoRa receive on the default presets; node ID from the unencrypted header | Decoded |
+| **LoRaWAN** devices | LoRa receive on the default uplink channels; DevAddr / DevEUI from the header | Decoded |
 
-### **4. 2.4 GHz RF Testing (via NRF24L01+)**
-- **Sniffing and Interception:** Capture proprietary 2.4 GHz RF signals (non-Wi-Fi/Bluetooth) used by certain IoT devices and wireless peripherals.
-- **Packet Injection and Replay:** Inject and replay packets to manipulate or disrupt communication in proprietary RF systems.
+### What it does not do
 
-### **5. NFC/RFID Testing (via PN5180)**
-- **NFC Tag Scanning and Reading:** Detect and read NFC tags and RFID cards.
-- **Tag Cloning and Emulation:** Clone and emulate RFID/NFC cards to test access control systems.
-- **Relay Attacks:** Perform NFC relay attacks for security testing.
+- It does not decrypt Meshtastic or LoRaWAN payloads, or decode ELRS packets.
+  ELRS needs the pilot's binding phrase.
+- It cannot demodulate DJI OcuSync / O3 / O4 video links; this hardware can't
+  handle that kind of wideband signal. DJI aircraft are caught by their
+  Remote ID broadcasts instead.
+- ELRS FLRC modes (2.4 GHz F500/F1000) are invisible to the LR1121.
+- It does not show distance or bearing to you: the board has no GPS or compass.
+  For Remote ID drones it does show the **drone-to-pilot** distance.
+- Two ELRS links with identical settings show as one target.
 
-### **6. IR Signal Capture and Transmission (via IR LED/Receiver)**
-- **IR Signal Capture:** Record IR signals from remotes (e.g., TV, air conditioner remotes).
-- **Signal Replay:** Replay captured IR signals to control IR-based devices.
+## Hardware
 
-### **7. Data Logging and Custom Scripts (via MicroSD)**
-- **Log Storage:** Store captured data, signals, and test results on a MicroSD card.
-- **Custom Scripts:** Load and execute custom attack scripts from the MicroSD card to automate pen-testing tasks.
+- LilyGO **T-Display-S3-Pro** (ESP32-S3, 16 MB flash, 8 MB PSRAM, 2.33" 222×480
+  touch screen) with the **MVSRLora** back plate (LR1121, speaker, vibration
+  motor, RTC). See
+  [T-Display-S3-Pro-MVSRLora](https://github.com/Xinyuan-LilyGO/T-Display-S3-Pro-MVSRLora).
+- Antenna(s) on the LR1121 connector, sized for the bands you care about.
+- Optional: a FAT32 microSD card for CSV logs.
 
-## **Components**
-The project uses several hardware components to enable all the features described:
+All pins are in [`include/board_pins.h`](include/board_pins.h).
 
-### **Microcontroller:**
-- **DSTIKE D-duino 32 (or any ESP32 based device)**: The core of the device, handling Wi-Fi, Bluetooth, and control of other connected modules. [click here](https://dstike.com/products/d-duino-32-ii-dual-screen)
+## Build and flash
 
-### **Modules:**
-1. **PN5180 (NFC/RFID Reader/Writer)**: [click here](https://www.aliexpress.us/item/2255800898209354.html?spm=a2g0o.productlist.main.3.426ede69lRwYd9&algo_pvid=5be9b316-9c80-437f-acb0-cde0fe82ce23&algo_exp_id=5be9b316-9c80-437f-acb0-cde0fe82ce23-1&pdp_npi=4%40dis%21USD%214.40%214.40%21%21%214.40%214.40%21%402101e9a217256492677022260e3a15%2110000014282558858%21sea%21US%216045824045%21X&curPageLogUid=f0MugwJMs5DN&utparam-url=scene%3Asearch%7Cquery_from%3A)
-   - Used for scanning, cloning, and emulating NFC/RFID tags.
-2. **CC1101 RF Module (Sub-GHz)**: [click here](https://www.aliexpress.us/item/3256805747351167.html?spm=a2g0o.order_list.order_list_main.41.1f1c1802CPXAcc&gatewayAdapt=glo2usa)
-   - For RF signal capturing, replaying, and jamming in Sub-GHz frequencies.
-3. **NRF24L01+ Module (2.4 GHz RF)**: [click here](https://www.aliexpress.us/item/3256805993151494.html?spm=a2g0o.order_list.order_list_main.59.1f1c1802CPXAcc&gatewayAdapt=glo2usa)
-   - Captures and manipulates 2.4 GHz proprietary RF communication protocols.
-   
-### **IR Components:**
-1. **IR LED (Transmitter)**: Used to transmit recorded or custom IR signals. [click here](https://www.adafruit.com/product/5639) 
-2. **TSOP38238 (IR Receiver)**: Captures incoming IR signals from remote controls. [click here](https://www.adafruit.com/product/157)
+Install [PlatformIO](https://platformio.org/install/cli), then from the repository root:
 
-### **Peripherals:**
-1. **Dual OLED Displays (I2C)**: Provides real-time feedback and a menu system for navigation. (Built into the Dstike D-Duino 32 Dual II)
-2. **5-Way Navigation Button**: Allows easy navigation of the device's menu and options. (Can use the Embedded controls on the D-Duino if preferred) [click here](https://www.aliexpress.us/item/2251832767971032.html?spm=a2g0o.productlist.main.5.4777pKZUpKZU2u&algo_pvid=25cf2911-590e-4dc9-be68-7eefd06300b9&algo_exp_id=25cf2911-590e-4dc9-be68-7eefd06300b9-2&pdp_npi=4%40dis%21USD%210.97%210.97%21%21%210.97%210.97%21%402101c5b117256490502064231e3596%2166348607719%21sea%21US%216045824045%21X&curPageLogUid=FY31OUa9dGcH&utparam-url=scene%3Asearch%7Cquery_from%3A) (use whatever you want here)
-3. **MicroSD Card Reader (SPI)**: For storing logs and loading custom scripts for automation. (Built into the Dstike D-Duino 32 Dual II)
+```bash
+pio run -e t-display-s3-pro-lr1121 -t upload
+```
 
-### **Power:**
-1. **3.7v Lipo Battery**: Provides the device with power. Make sure to research LiPo batteries before you start playing with them. [click here](https://www.amazon.com/dp/B08T6QS58J?ref=nb_sb_ss_w_as-reorder_k2_1_7&amp=&crid=1QM1M5728G1J9&amp=&sprefix=3.7v+ba)
-2. **Adafruit Powerboost 1000c**: Load-sharing charger circuit that allows charging of batteries and power supply to the device. [click here](https://www.adafruit.com/product/2465)
+If no serial port appears, hold **BOOT** (bottom-left button), plug in USB,
+release, and upload again. To watch the log:
 
-### **Storage:**
-1. 32GB MicroSD card: Stores logs, programs and data. 32GB is the largest supported partition on ESP32s. [click here](https://www.amazon.com/SanDisk-Ultra-UHS-I-Memory-Adapter/dp/B00M55C0NS/ref=sr_1_7?crid=IN8E9C5QACD8&dib=eyJ2IjoiMSJ9.B95zlcmYonfz4dY7353CikOTGq4gxvPdpZ9JTVXWNlwkRO7PGJOQbtTqrKfmuztrDqjv9dmItno_1id_mIwg75OkS0ERdIgQVOD7iDgSCJ7LWdwiEXjhNEu5JqyRj7bHo-L92ieL9e2flMOaB00h4MkDH_MgWAcNq9DQQcFh545Z0qihgtOkcxZQEtsdmVfzW4eYJQvfecmWeloKFozWE4zMlm9JVMMgD8W_f35QteY.EAqy466m6iTcsbn8g_uaxNl6Q1PJGHPRw3mz1jb8eBg&dib_tag=se&keywords=microsd+32gb&qid=1725649398&sprefix=microsd+32gb%2Caps%2C88&sr=8-7)
+```bash
+pio device monitor -b 115200
+```
 
-### **Misc:**
-1. MCP23017 IO Expansion Board: Allows for more GPIO pins for your device. [click here](https://www.amazon.com/MCP23017-IO-Expansion-Board-Interface/dp/B082MMRNM4/ref=asc_df_B082MMRNM4/?tag=hyprod-20&linkCode=df0&hvadid=693275687937&hvpos=&hvnetw=g&hvrand=65468722566896919&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=1021296&hvtargid=pla-2265047735973&psc=1&mcid=2865196cbacc3460a9f89d28bd672874)
+## Using it
 
-## **Planned Features**
-1. **Custom Menu System:**
-   - A simple, user-friendly menu displayed on the **OLED screens**, navigated using the **5-way button**. The menu will allow users to select Wi-Fi testing, RF testing, NFC/RFID functions, IR control, and view logs or stored scripts.
+**Screens**
+- **Targets** (home): the live list, decoded drones first.
+  - Red = decoded drone or ELRS link; amber = heuristic; grey = LoRa node.
+  - Faded = not heard for 20 s; a row disappears after 60 s.
+- **Hunt**:
+  - big smoothed RSSI meter;
+  - **warmer / colder** arrow (change over the last 3 s);
+  - peak hold and a 30 s history graph;
+  - beeps and vibration that speed up as you get closer;
+  - for Remote ID: drone and pilot coordinates.
+- **Spectrum** (turns to landscape): a live spectrum analyzer.
+  - Live trace in amber, slowly decaying peak hold in red, noise floor in blue.
+  - Activity hits marked by spreading factor, and a waterfall underneath.
+  - **Tap** the trace to place a marker with a frequency/level readout.
+  - **`+` / `−`** (or the up/down buttons) zoom around the marker, down to
+    4 MHz wide (16 MHz at 2.4 GHz).
+  - **Band** (or long-press down) switches 915/868 → 433 → 2.4 GHz.
+- **Settings**: region (FCC/EU), each detector on/off, alerts, sound,
+  vibration, volume, brightness, SD logging, and About/debug counters.
+- **Self-test** (Settings → *Run self-test*, or serial `selftest`): a
+  receive-only check of the whole device in about 12 s.
+  - Radios: the LoRa radio's sweeps, activity checks and error rate; Wi-Fi
+    and BLE reception.
+  - Detectors: built-in test frames for every detector go through the real
+    decoding code into the target list, the alert policy and the CSV formatter.
+  - A chirp and a buzz for you to confirm by ear and feel.
+  - Results show as a pass/warn/fail list (also printed to serial as
+    `SELFTEST,…` lines). Test targets are prefixed `TEST-`, never alert or get
+    logged, and are removed afterwards.
 
-2. **Modular Functionality:**
-   - The device will support different modes for each type of penetration testing (Wi-Fi, RF, NFC, IR), with each module operating independently, allowing for multi-tasking and seamless switching between functions.
+**Hunting tip:** the antenna picks up equally in all directions. Hold the
+device against your chest and turn slowly. Your body blocks signals from
+behind you, so the reading is strongest when you face the transmitter.
 
-3. **Logs and Scripts:**
-   - The **MicroSD card** will allow storing the results of tests, as well as loading pre-written attack scripts, enabling users to automate penetration testing tasks.
-  
-4. **Modularity:**
-   - This repository will hopefully host a myriad of **3D printable modules and accessories** for the NETH3T.
-   - Ability to plug and play **I2C** and **SPI** modules to customize your device.
+| Control | Short press | Long press |
+|---|---|---|
+| BOOT (bottom-left) | Back / leave Hunt | — |
+| Top-right | Up | Lock selected target (Hunt) / change setting |
+| Bottom-right | Down | Settings |
+| Touch | Tap a row to hunt it; tap the alert banner; bottom tabs switch **Targets / Spectrum / Settings**; **Back** (top-right) leaves Hunt | |
+| Home key (printed circle under the screen) | Back to Targets from anywhere; releases a Hunt lock | |
 
-## **Getting Started**
-### **Prerequisites**
-- **ESP32 Arduino Core**: Ensure you have the ESP32 libraries installed in your development environment.
-- **SPI and I2C Libraries**: Required to interface with the various modules.
-- **PN5180, CC1101, and NRF24L01+ libraries**: To control the NFC/RFID, Sub-GHz RF, and 2.4 GHz RF modules.
+**Alerts**
 
-### **Hardware Setup**
-1. **Wiring the Modules**:
-   - Connect the **PN5180, CC1101, and NRF24L01+** modules to the **ESP32** via **SPI**.
-   - Connect the **OLED screens** via **I2C** (if applicable).
-   - Wire the **5-way navigation button** to the designated GPIO pins (if applicable). 
-   - Attach the **IR LED** and **IR Receiver** for IR signal control.
+| Event | Response |
+|---|---|
+| New Remote ID drone or ELRS link | Red banner, chirp, double vibration |
+| Heuristic hit | Amber banner, short vibration |
+| LoRa nodes | Listed only |
 
-  ## **Pinout Table**
+## Logs and serial commands
 
-## NETH3T Pinout Table
+Every observation is printed to USB serial as `LOG,<csv row>`. With a card
+inserted, it is also appended to `/neth3t/SNNN.csv`, one file per power-on.
+The columns are:
 
-| **Component**                | **Pin Name**     | **ESP32 GPIO Pin**     | **Expander Pin**  |
-|------------------------------|------------------|------------------------|-------------------|
-| **PN5180 (NFC/RFID)**         | SCK              | GPIO 18                |                   |
-|                              | MOSI             | GPIO 23                |                   |
-|                              | MISO             | GPIO 19                |                   |
-|                              | CS               |                        | **PA0**           |
-|                              | IRQ              |                        | **PA1**           |
-|                              | RST              |                        | **PA2**           |
-|                              | VCC              | 3.3V                   |                   |
-|                              | GND              | GND                    |                   |
-| **CC1101 (Sub-GHz RF)**       | SCK              | GPIO 18                |                   |
-|                              | MOSI             | GPIO 23                |                   |
-|                              | MISO (GDO1)      | GPIO 19                |                   |
-|                              | CSN              |                        | **PB0**           |
-|                              | VCC              | 3.3V                   |                   |
-|                              | GND              | GND                    |                   |
-| **NRF24L01+ (2.4 GHz RF)**    | SCK              | GPIO 18                |                   |
-|                              | MOSI             | GPIO 23                |                   |
-|                              | MISO             | GPIO 19                |                   |
-|                              | CSN              |                        | **PB1**           |
-|                              | CE               |                        | **PB2**           |
-|                              | IRQ              |                        | **PB3**           |
-|                              | VCC              | 3.3V                   |                   |
-|                              | GND              | GND                    |                   |
-| **IR Emitter**                | DAT              |                        | **PB4**           |
-|                              | VCC              | 3.3V                   |                   |
-|                              | GND              | GND                    |                   |
-| **TSOP IR Receiver**          | OUT (Data)       |                        | **PB5**           |
-|                              | VCC              | 3.3V                   |                   |
-|                              | GND              | GND                    |
-| **MCP23017 (GPIO Expander)**  | SDA              | GPIO 21                |                   |
-|                              | SCL              | GPIO 22                |                   |
-|                              | INTA/INTB        | Optional IRQ pin on ESP32 |               |
+```
+t_ms,iso_time,type,conf,id,freq_khz,rssi,snr,sf,bw_khz,lat,lon,alt_m,op_lat,op_lon,vendor,extra
+```
 
-### **Free ESP32 GPIOs**:
-GPIO 0, GPIO 1 (TX), GPIO 3 (RX), GPIO 5, GPIO 25, GPIO 26, GPIO 32, GPIO 33, GPIO 34 remain free for other use.
+Serial commands (115200 baud, newline-terminated):
 
-### This is the chart when using a Dstike D-Duino 32 II with a MCP23017 IO expander. Your board may differ!
-You may need to create a BUS to wire some modules together for some boards such as I2C, SPI components, power and ground. 
-Make sure that your board can provide enough power for this to function!
-You may also need to use Multiplexors/I2C expanders for some boards so shop accordingly!
+| Command | Effect |
+|---|---|
+| `time <unix seconds>` | Set the clock (kept by the on-board RTC); rows then carry `iso_time` |
+| `region fcc` / `region eu` | Switch channel plans |
+| `dump` | Print the target table |
+| `stats` | Radio counters, dropped observations, restarts, free memory |
+| `sweep` | Latest raw RSSI sweep of each band, with its noise floor |
+| `selftest` | Run the self-test; results print as `SELFTEST,<id>,<result>,<detail>` |
 
+## Development
 
+Parsers, classifiers, the target table, alert policy and CSV formatting are
+plain C++ with no hardware dependencies, and have host unit tests:
 
+```bash
+pio test -e native
+```
 
-### **Building and Flashing the Firmware**
-Once the hardware is wired and the software dependencies are installed, you can build and flash the firmware to the device.
+- Field checks for the hardware parts: [`docs/FIELD_TEST.md`](docs/FIELD_TEST.md).
+- Design: [`docs/superpowers/specs/2026-11-03-neth3t-sigint-design.md`](docs/superpowers/specs/2026-11-03-neth3t-sigint-design.md).
 
-## **Contributing**
-Contributions to this project are welcome. If you have ideas for new features, improvements, or additional modules, feel free to create an issue or submit a pull request.
+## License
 
-## **License**
-This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for more information.
+See [LICENSE](LICENSE).

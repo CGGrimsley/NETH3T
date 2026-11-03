@@ -1,0 +1,86 @@
+#include "radio/wifi_sniffer.h"
+#include <Arduino.h>
+#include <WiFi.h>
+#include <esp_wifi.h>
+#include <cstring>
+#include "core/db_task.h"
+#include "core/health.h"
+#include "detect/id_cache.h"
+#include "detect/obs_build.h"
+#include "settings/settings.h"
+
+namespace {
+struct Frame {
+  uint16_t len;
+  int8_t rssi;
+  uint8_t ch;
+  uint8_t data[512];
+};
+QueueHandle_t g_q = nullptr;
+volatile uint8_t g_pinned = 0;
+volatile uint8_t g_ch = 1;
+volatile uint32_t g_frames = 0;
+IdCache g_ids;
+const uint8_t kHop[] = {1, 6, 11, 2, 7, 12, 3, 8, 13, 4, 9, 5, 10};
+
+void on_pkt(void* buf, wifi_promiscuous_pkt_type_t type) {
+  if (type != WIFI_PKT_MGMT || !g_q) return;
+  g_frames++;
+  const wifi_promiscuous_pkt_t* p = (const wifi_promiscuous_pkt_t*)buf;
+  uint8_t fc0 = p->payload[0];
+  if (fc0 != 0x80 && fc0 != 0x50 && fc0 != 0xD0) return;  // beacon, probe resp, action
+  Frame f;
+  uint16_t len = p->rx_ctrl.sig_len;
+  len = len > 4 ? len - 4 : 0;  // strip FCS
+  if (len > sizeof f.data) len = sizeof f.data;
+  f.len = len;
+  f.rssi = (int8_t)p->rx_ctrl.rssi;
+  f.ch = (uint8_t)p->rx_ctrl.channel;
+  memcpy(f.data, p->payload, len);
+  xQueueSend(g_q, &f, 0);
+}
+
+void handle(const Frame& f) {
+  const Settings& s = settings::get();
+  DetectFlags fl = {s.en_rid_wifi, s.en_rid_ble, s.en_drone_wifi};
+  Observation o;
+  if (obs_from_wifi(f.data, f.len, f.rssi, f.ch, millis(), fl, g_ids, o)) db::post(o);
+}
+
+void parse_task(void*) {
+  Frame f;
+  for (;;)
+    if (xQueueReceive(g_q, &f, portMAX_DELAY) == pdTRUE) handle(f);
+}
+
+void hop_task(void*) {
+  size_t i = 0;
+  for (;;) {
+    health::beat(health::WIFI);
+    uint8_t ch = g_pinned ? g_pinned : kHop[i++ % sizeof kHop];
+    if (ch != g_ch) {
+      esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
+      g_ch = ch;
+    }
+    vTaskDelay(pdMS_TO_TICKS(g_pinned ? 100 : (ch == 6 ? 250 : 120)));
+  }
+}
+}  // namespace
+
+namespace wifi_sniffer {
+void start() {
+  g_q = xQueueCreate(16, sizeof(Frame));
+  WiFi.mode(WIFI_STA);  // station mode, never associates; needed for promiscuous RX
+  WiFi.disconnect();
+  wifi_promiscuous_filter_t filt = {.filter_mask = WIFI_PROMIS_FILTER_MASK_MGMT};
+  esp_wifi_set_promiscuous_filter(&filt);
+  esp_wifi_set_promiscuous_rx_cb(on_pkt);
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
+  xTaskCreatePinnedToCore(parse_task, "wifi_parse", 6144, nullptr, 2, nullptr, 0);
+  xTaskCreatePinnedToCore(hop_task, "wifi_hop", 3072, nullptr, 2, nullptr, 0);
+}
+void pin_channel(uint8_t ch) { g_pinned = ch <= 13 ? ch : 0; }
+uint8_t channel() { return g_ch; }
+uint32_t frames() { return g_frames; }
+}  // namespace wifi_sniffer
