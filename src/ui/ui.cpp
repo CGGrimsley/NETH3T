@@ -77,6 +77,10 @@ void draw_status(Arduino_Canvas* c) {
 const Screen kTabs[3] = {Screen::TARGETS, Screen::SPECTRUM, Screen::SETTINGS};
 const char* const kTabNames[3] = {"Targets", "Spectrum", "Settings"};
 
+bool has_tabs() {
+  return g_screen == Screen::TARGETS || g_screen == Screen::SPECTRUM || g_screen == Screen::SETTINGS;
+}
+
 void draw_tabs(Arduino_Canvas* c) {
   c->fillRect(0, kTabY, TFT_W, kTabH, kPanel);
   c->drawFastHLine(0, kTabY, TFT_W, kDim);
@@ -99,7 +103,7 @@ bool handle_nav(const Input& in) {
     g_screen = Screen::TARGETS;
     return true;
   }
-  if (g_screen != Screen::HUNT && in.tap && in.y >= kTabY) {
+  if (has_tabs() && in.tap && in.y >= kTabY) {
     g_screen = kTabs[constrain(in.x / (TFT_W / 3), 0, 2)];
     return true;
   }
@@ -220,9 +224,13 @@ void ui_task(void*) {
         if (!consumed) ui_settings::input(in);
         ui_settings::draw(c);
         break;
+      case Screen::SELFTEST:
+        if (!consumed) ui_selftest::input(in);
+        ui_selftest::draw(c);
+        break;
     }
     run_hunt_feedback(hunting ? &locked : nullptr, now);
-    if (g_screen != Screen::HUNT) draw_tabs(c);
+    if (has_tabs()) draw_tabs(c);
     draw_status(c);
     draw_banner(c, now);
     display::flush();

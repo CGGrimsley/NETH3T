@@ -8,6 +8,7 @@
 #include "core/health.h"
 #include "log/csv_format.h"
 #include "radio/lora_scanner.h"
+#include "selftest/selftest.h"
 #include "settings/settings.h"
 
 namespace {
@@ -90,7 +91,8 @@ void run(char* line) {
   else if (!strcmp(line, "dump")) cmd_dump();
   else if (!strcmp(line, "stats")) cmd_stats();
   else if (!strcmp(line, "sweep")) cmd_sweep();
-  else if (line[0]) Serial.println("ERR commands: time <unix> | region fcc|eu | dump | stats | sweep");
+  else if (!strcmp(line, "selftest")) selftest::start();
+  else if (line[0]) Serial.println("ERR commands: time <unix> | region fcc|eu | dump | stats | sweep | selftest");
 }
 }  // namespace
 

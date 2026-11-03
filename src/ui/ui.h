@@ -1,7 +1,7 @@
 #pragma once
 #include "core/target_db.h"
 
-enum class Screen : uint8_t { TARGETS, HUNT, SPECTRUM, SETTINGS };
+enum class Screen : uint8_t { TARGETS, HUNT, SPECTRUM, SETTINGS, SELFTEST };
 
 namespace ui {
 void start();  // UI task, 20 fps, core 1

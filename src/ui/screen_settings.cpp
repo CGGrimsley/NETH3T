@@ -2,6 +2,7 @@
 #include "core/db_task.h"
 #include "core/health.h"
 #include "radio/lora_scanner.h"
+#include "selftest/selftest.h"
 #include "settings/settings.h"
 #include "ui/display.h"
 #include "ui/ui.h"
@@ -12,12 +13,12 @@ using namespace ui_color;
 namespace {
 enum Item : uint8_t {
   REGION, RID_WIFI, RID_BLE, DRONE_WIFI, ELRS, FHSS, MESH, LORAWAN, SHOW_NODES, SD_LOG,
-  SOUND, VIBE, ALERT_MODE, VOLUME, BRIGHTNESS, kItems
+  SOUND, VIBE, ALERT_MODE, VOLUME, BRIGHTNESS, SELFTEST, kItems
 };
 const char* const kLabels[kItems] = {
     "Region",     "RemoteID WiFi", "RemoteID BLE", "Drone WiFi", "ELRS",     "FHSS",
     "Meshtastic", "LoRaWAN",       "Show LoRa",    "SD log",     "Sound",    "Vibration",
-    "Alerts",     "Volume",        "Brightness",
+    "Alerts",     "Volume",        "Brightness",   "Run self-test",
 };
 constexpr int kRowH = 24, kListY = kStatusH + 40, kAboutRows = 6;
 constexpr int kVisible = (kTabY - kListY - kAboutRows * 12 - 8) / kRowH;
@@ -48,6 +49,7 @@ void value(const Settings& s, uint8_t i, char* out, size_t cap) {
     case ALERT_MODE: snprintf(out, cap, "%s", s.alert_mode == 0 ? "off" : (s.alert_mode == 1 ? "banner" : "full")); break;
     case VOLUME: snprintf(out, cap, "%u", s.volume); break;
     case BRIGHTNESS: snprintf(out, cap, "%u", s.brightness); break;
+    case SELFTEST: snprintf(out, cap, "%s", selftest::running() ? "..." : "run"); break;
   }
 }
 
@@ -67,6 +69,10 @@ void activate(uint8_t i) {
         s.brightness = (uint8_t)(s.brightness % 16 + 1);
         display::set_brightness(s.brightness);
         break;
+      case SELFTEST:
+        selftest::start();
+        ui::go(Screen::SELFTEST);
+        return;
     }
   }
   settings::save();

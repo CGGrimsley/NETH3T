@@ -66,6 +66,10 @@ namespace ui_spectrum {
 void draw(Arduino_Canvas* c);
 void input(const Input& in);
 }
+namespace ui_selftest {
+void draw(Arduino_Canvas* c);
+void input(const Input& in);
+}
 namespace ui_settings {
 void draw(Arduino_Canvas* c);
 void input(const Input& in);
