@@ -4,6 +4,8 @@
 #include "alert/audio.h"
 #include "alert/vibe.h"
 #include "core/boot.h"
+#include "log/sd_log.h"
+#include "log/serial_cmd.h"
 #include "core/db_task.h"
 #include "core/power.h"
 #include "core/spi_bus.h"
@@ -57,6 +59,8 @@ void setup() {
   boot_step("DISPLAY", g_boot.display);
   g_boot.touch = touch::init();
   boot_step("TOUCH", g_boot.touch);
+  g_boot.rtc = serial_cmd::rtc_init();
+  boot_step("RTC", g_boot.rtc);
   buttons::init();
   audio::init();
   vibe::init();
@@ -64,6 +68,9 @@ void setup() {
   display::set_brightness(settings::get().brightness);
   g_boot.lora = lora_scanner::init(&g_boot.lora_err);
   boot_step("LORA", g_boot.lora);
+  g_boot.sd = sd_log::init();
+  boot_step("SD", g_boot.sd);
+  db::set_sink(sd_log::write);
   db::start();
   lora_scanner::start();
   ui::start();

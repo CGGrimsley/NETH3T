@@ -64,3 +64,13 @@ Run these on the real device after flashing. Open the serial monitor
 | On Hunt, walk toward the transmitter | Beeps get faster and higher in pitch; vibration pulses speed up |
 | Settings → Sound off / Vibration off | Each feedback channel mutes independently |
 | Stop the transmitter while on Hunt | Beeps stop within ~3 s |
+
+## 7. Logging and serial commands
+
+| Step | Expected |
+|---|---|
+| Boot with a FAT32 microSD card inserted | `BOOT SD OK`, serial `LOG file /neth3t/S000.csv` (next free number on later boots); status bar `SD+` |
+| Run 5 minutes near any target | File has the CSV header and one row per observation; serial shows the same rows prefixed `LOG,` |
+| Serial: `time <unix seconds>` (e.g. paste the output of `date +%s`) | `OK time set (RTC updated)`; new rows carry `iso_time`; still correct after a power-cycle |
+| Serial: `dump` / `stats` / `region eu` | Target table / counters / region switch confirmed with `OK` |
+| Boot without a card | `BOOT SD FAIL`, `SD-`; everything else works and rows still go to serial |

@@ -347,7 +347,7 @@ void start() {
   if (!g_ok) return;
   g_region = settings::get().region;
   g_region_dirty = true;
-  xTaskCreatePinnedToCore(scanner_task, "lora", 8192, nullptr, 2, nullptr, 1);
+  xTaskCreatePinnedToCore(scanner_task, "lora", 12288, nullptr, 2, nullptr, 1);
 }
 
 void set_region(Region r) {
